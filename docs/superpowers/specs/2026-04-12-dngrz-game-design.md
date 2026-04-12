@@ -18,6 +18,8 @@ The game is designed for esports from the ground up -- with matchmaking, bo3/bo5
 - Banana Ball (rule modifications that cut slow parts and amplify exciting parts)
 - Rocket League (easy to learn, massive skill ceiling)
 
+**Foundational design rule:** The pitch/bat duel with rosters and no zones must be fun on its own. All tactical systems (zones, momentum, abilities) are seasoning on a game that is fundamentally enjoyable as arcade baseball. If we need those systems to make the game fun, we have a deeper problem. Prototype the core baseball feel first, then layer systems on.
+
 ## 1. Core Game Loop: Phase-Based Rhythm
 
 The game alternates between **tactical phases** (strategic decisions) and **action phases** (arcade baseball execution). This creates a rhythm similar to a fighting game's neutral-vs-combo flow or football's play-call-before-the-snap structure.
@@ -30,18 +32,22 @@ The game alternates between **tactical phases** (strategic decisions) and **acti
    - Offensive player: can observe fielder positions (but not hidden zones) and plan approach
    - Longer timer since there's more to set up
 
-2. **Pre-Pitch** (Tactical Phase, ~5-8s)
-   - Before each pitch
-   - Both players make micro-adjustments simultaneously
+2. **Breakpoint Tactical Phase** (~5-8s)
+   - Triggers only at meaningful game state changes:
+     - When a new batter steps up
+     - After a hit or error
+     - After a run scores
+   - Both players make adjustments simultaneously
    - Defensive: shift fielders, queue ability activations
    - Offensive: adjust batter stance, queue baserunner commands, activate offensive zones
-   - Timed to keep pace up -- this is the "play call before the snap"
+   - Does NOT trigger between every pitch -- pitches flow continuously between breakpoints
 
 3. **The Pitch** (Action Phase)
    - Real-time arcade execution
    - Pitcher selects pitch type, location, and executes with timing/input mechanics
    - Batter reads pitch, tracks location, times swing
    - Pure skill-based duel -- the heartbeat of the game
+   - Between pitches, players can make limited real-time micro-adjustments (fielder nudges, baserunner positioning) without stopping play -- like a manager signaling from the dugout
 
 4. **The Play** (Action Phase)
    - Ball in play: fielding, throwing, baserunning in real time
@@ -52,26 +58,40 @@ The game alternates between **tactical phases** (strategic decisions) and **acti
    - Outcome resolves (out, hit, run scored, etc.)
    - Cooldowns tick, resources update
    - Crowd momentum meter adjusts
-   - Loop back to Pre-Pitch, or Inning Setup if 3 outs
+   - Loop back to next pitch (continuous) or Breakpoint Tactical Phase if a trigger condition was met, or Inning Setup if 3 outs
+
+### Real-Time Micro-Adjustments vs. Tactical Phases
+
+Between breakpoints, players can make **free** real-time adjustments: nudging fielder positions, cueing baserunner leads. These do not cost tactical clock time. However, **zone placement, ability activation, and strategic setup** require a full tactical phase. This keeps the distinction clean -- you can fidget with positioning in real time, but the big decisions happen during pauses.
+
+### Tactical Time Budget (Chess Clock)
+
+Each player has a **tactical time pool** for the entire game. Every tactical phase (inning setup and breakpoint phases) drains from this pool. Players choose how to spend their time -- burn it early on elaborate setups or conserve it for clutch late-game decisions.
+
+- **Time pool scales with rank** -- generous at low ranks (players are still learning), tighter at high ranks (time management becomes a skill)
+- **Clock exhaustion = degraded control, not removal.** When your clock runs out, you still participate in tactical phases but with reduced options (e.g., one quick-action instead of full control, default zone placements). You are limited, not locked out. Agency is never fully removed.
+- Time-extending Phenom abilities (e.g., "Call Time") cost from this pool with per-game usage limits, preventing stall tactics
 
 ### Design Principle: Layered Skill Expression
 
-New players can completely ignore tactical phases. The game auto-positions fielders and uses default setups, letting beginners just play baseball. Depth reveals itself as players improve:
+New players can completely ignore tactical phases. The game provides auto-tactical assist that handles fielder positioning AND places basic zones automatically. Depth reveals itself as players improve:
 
 1. **Mechanical execution** -- can you throw/hit accurately (accessible floor)
 2. **Pitch-vs-bat reads** -- can you outthink your opponent in the duel (mid-level play)
 3. **Zone/tactical play** -- are you leveraging field setup to maximize advantages (competitive ceiling)
 
+**Onboarding the tactical layer:** Zone reveals are dramatic and educational -- when a ball triggers a hidden zone, it visually explodes into existence with particles, sound, and a UI callout explaining what happened ("FROST ZONE -- Ball Speed Reduced"). Players learn what zones do through play, not tutorials. The auto-tactical assist provides a baseline so new players aren't competing with zero zones against experienced opponents.
+
 ### Match Structure
 
 - **5 innings per game** (~12-18 minutes target)
 - Modified baseball rules in the spirit of Banana Ball -- cut the slow parts, amplify the exciting parts (specific rule modifications TBD during prototyping)
-- Bo3 series for ranked constructed (Bo5 at higher tiers and tournaments)
-- Single games for draft mode ranked
+- Bo3 for ranked constructed at Platinum and above (see Competitive Modes for rank-gated format details)
+- Single games for draft mode ranked and lower-tier constructed ranked
 
 ## 2. Pitch vs. Bat: The Core Duel
 
-The pitch-versus-bat exchange is the foundation everything else builds on. It needs to be genuinely skill-based with its own depth, independent of the zone/tactical layer.
+The pitch-versus-bat exchange is the foundation everything else builds on. It needs to be genuinely skill-based with its own depth, independent of the zone/tactical layer. **This is the first thing to prototype and it must be fun before any other system is layered on.**
 
 ### Pitching
 
@@ -115,7 +135,11 @@ Alternate versions of the same Phenom with different stat distributions and abil
 
 Example: A fire mage Phenom's base version might be an aggressive power hitter. Their variant could be a control-oriented pitcher. This allows deep roster customization and creates meaningful progression without power creep.
 
-Every Phenom's **base version is free on day one**. Variants are earned through gameplay progression (packs). Variants are sidegrades, never upgrades.
+**Access model:**
+- Every Phenom's **base version is free on day one**
+- Variants are earned through gameplay progression (Hype currency -> packs) at a reasonable rate
+- **Draft mode gives access to every variant regardless of what you own** -- draft is the great equalizer
+- Variants are sidegrades, never upgrades -- no variant should be strictly better than the base version in all situations
 
 ## 4. Factions & Synergies
 
@@ -142,7 +166,7 @@ Factions are designed to support distinct competitive archetypes:
 
 ## 5. Crowd Momentum System
 
-Momentum is the **tempo control mechanic**, thematically represented as the crowd's energy. It determines who controls the pace of the game.
+Momentum is the **tempo control mechanic**, thematically represented as the crowd's energy. It determines who has the advantage and creates natural game narratives.
 
 ### How Momentum Works
 
@@ -150,11 +174,24 @@ Momentum is the **tempo control mechanic**, thematically represented as the crow
 - Getting hits, stealing bases, making highlight defensive plays, and activating signature plays generate momentum
 - The crowd visually and audibly shifts toward the side with momentum -- colors change, noise shifts, banners wave
 
-### Momentum Effects
+### Momentum Effects: Power vs. Information
 
-- **High offensive momentum** -- batter's side gets more time in tactical phases or extra tactical actions. Defense feels rushed.
-- **High defensive momentum** -- pitcher's side can compress tactical windows (quick-pitch, shortened pre-pitch). Batter has less time to read and adjust.
-- **Neutral** -- standard timers for both sides.
+Momentum rewards the leading side with **power** and gives the trailing side **information**. Neither side is oppressed.
+
+**Leading team (high momentum):**
+- Access to **signature plays** -- each Phenom's ultimate ability, the highlight-reel moments
+- Stat boosts and enhanced ability effects
+- Crowd energy and psychological pressure
+- The reward for playing well is stronger tools
+
+**Trailing team (rally mechanics):**
+- **Information advantages** -- discovered zones stay revealed longer, free scout procs, or partial reveals of one opponent zone placement
+- The crowd rallies for the underdog, creating comeback narrative tension
+- The reward for being behind is better reads on the opponent's setup
+
+**Neutral momentum:** Standard state, no bonuses for either side.
+
+**Design rationale:** The leading team's advantage is power (stronger abilities, signature plays). The trailing team's advantage is knowledge (better information about the field). Neither side controls the other's tempo. This prevents snowballing while still making momentum worth building, and creates exciting comeback narratives where the underdog outmaneuvers a more powerful opponent through superior reads.
 
 ### Signature Plays
 
@@ -163,9 +200,9 @@ Full crowd momentum unlocks **signature plays** -- each Phenom's ultimate abilit
 ### Phenom Tempo Tools
 
 Some Phenoms have abilities that interact directly with momentum:
-- "Call Time" -- spend a resource to force an extended tactical phase (batter slowing things down)
-- "Quick Pitch" -- spend momentum to skip/shorten the next tactical phase (pitcher pushing pace)
+- "Call Time" -- spend tactical clock time to force an extended tactical phase (batter slowing things down, costs from chess-clock pool)
 - Passives that generate momentum from specific actions (a speedster from stolen bases, a power hitter from extra-base hits)
+- Abilities that manipulate the information layer (scout abilities, zone disruption)
 
 ### Esports & Spectator Value
 
@@ -173,13 +210,14 @@ The crowd system creates natural broadcast moments. Casters don't need to explai
 
 ## 6. Field Zones & Information Asymmetry
 
-The field is a tactical space where both players place invisible ability zones during tactical phases.
+The field is a tactical space where both players place invisible ability zones during tactical phases. **Note: the zone system as described here is a starting point. The full tactical depth will come from deeper Phenom interactions, conditional triggers, counter-play abilities, and systems discovered through prototyping. Zones alone are not sufficient strategic depth.**
 
 ### Zone Mechanics
 
 - Zones are placed during tactical phases using Phenom abilities
 - **Zones are invisible to the opponent** -- fog of war on the field
 - Zones only reveal when something interacts with them (batted ball passes through, runner crosses)
+- **Zone reveals are dramatic:** visual explosion, particle effects, sound cue, and UI callout explaining the effect ("FROST ZONE -- Ball Speed Reduced"). These are designed to be exciting moments and educational for new players.
 - **Spectators see all zones from both sides** -- full information broadcast view
 - Discovered zones stay revealed for the rest of that half-inning
 - Between innings, defense can reposition zones, resetting the fog of war
@@ -203,18 +241,26 @@ The field is a tactical space where both players place invisible ability zones d
 - Late in an inning, the batter has more info and can exploit discovered zones
 - Defense balances optimal zone placement vs. being predictable across innings
 - Some Phenoms have **scout abilities** that reveal zones passively, adding roster value beyond raw stats
+- **Trailing team rally mechanic** provides information advantages (see Crowd Momentum System)
 
-### Strategic Depth
+### Strategic Depth (Expansion Areas)
 
-**Defensive mind games:**
-- Place zones where you predict hits will go
-- Bait hitters into zones with fielder positioning
-- Move zones between innings to stay unpredictable
+Beyond basic zone placement, the tactical layer needs to grow to include:
+- **Phenom-to-Phenom interactions** -- abilities that link between teammates (e.g., a baserunner and batter creating combined effects)
+- **Conditional triggers** -- abilities that fire based on game state ("if a runner is on base when this Phenom fields a ball, X happens")
+- **Counter-play abilities** -- reactions, traps, disrupts that create back-and-forth during tactical phases
+- **Active baserunner gameplay** -- baserunners as active participants, not passive pieces
+- **Pitch/bat ability modifications** -- Phenom abilities that change the duel itself, not just the field
+- **Stadium selection as strategy** -- field properties that interact with faction strengths
 
-**Offensive scouting:**
-- Sacrifice early at-bats to probe the field
-- Place offensive zones to counter discovered defensive setups
-- Phenoms with scout abilities become high-value draft picks
+These systems will be designed through prototyping once the core baseball gameplay is solid.
+
+### Broadcast & Spectator Design
+
+The spectator experience requires its own design pass:
+- **Perspective toggle** -- spectator UI can switch between Player 1's view, Player 2's view, and full omniscient view
+- **Designed reveals** -- delayed zone reveals, caster-controlled highlighting, "about to trigger" tension indicators
+- **Player perspective replays** -- when a zone triggers, broadcast can show what it looked like from the affected player's side (they didn't know it was there)
 
 ## 7. Competitive Modes
 
@@ -240,6 +286,7 @@ Live pick-phase against your opponent:
 
 - **Ban phase** -- each player bans 2-3 Phenoms
 - **Snake draft** -- alternating picks (A, BB, AA, BB...) building a 9-Phenom roster from a shared pool
+- **All Phenom variants available in draft regardless of collection** -- draft is the great equalizer
 - No sideboard -- single game format
 - Faction synergies still matter, creating tension between best-available picks and synergy building
 - Tests adaptability, valuation, and opponent reads rather than pre-built optimization
@@ -247,8 +294,13 @@ Live pick-phase against your opponent:
 ### Ranked Ladder
 
 - **Separate ranks** for Constructed and Draft
-- Constructed ranked: Bo3 with sideboarding (Bo5 at higher tiers)
-- Draft ranked: single games
+- **Rank-gated series format for Constructed:**
+  - Bronze through Gold: single games, climb through wins
+  - **Promotion from Gold to Platinum: win a Bo3 promotion series** (this is a milestone moment)
+  - Platinum and above: all matches are Bo3 with sideboarding
+  - Promotion to Diamond+: win a Bo5 promotion series
+  - Bo5 reserved for tournament play and top-tier promotions
+- Draft ranked: single games at all ranks
 - Seasonal resets with cosmetic rewards
 - MMR-based matchmaking with visible rank tiers
 
@@ -279,6 +331,8 @@ Earned through gameplay, spent on Phenom variant packs:
 - Purchased with Hype (earned currency only)
 - Contain alternate Phenom variants (sidegrades with different stat spreads and ability kits)
 - **Every base Phenom is free from day one** -- packs expand options, never gate competitive access
+- Earn rate tuned so active players build a competitive variant pool within a reasonable timeframe
+- **Draft mode provides access to all variants regardless of collection** -- ensures competitive accessibility
 
 ### Cosmetic Monetization (Real Money)
 
@@ -306,7 +360,43 @@ Earned through gameplay, spent on Phenom variant packs:
 - The sport itself is called **Dingerz** in-universe, and Phenoms are the athletes who play it
 - World-building supports the game without requiring lore engagement -- you can ignore it entirely and just compete
 
-## 10. Open Design Questions
+## 10. New Player Onboarding
+
+Onboarding is critical given the game's layered complexity. The approach is learning through play, not front-loaded tutorials.
+
+### Pre-Built Starter Rosters
+
+New players pick a faction and receive a ready-to-play 9-Phenom roster with a pre-configured bench. They can compete immediately without understanding roster construction. Customization unlocks as they learn.
+
+### Auto-Tactical Assist
+
+New players have auto-assist enabled by default:
+- Auto-positions fielders based on batter tendencies
+- Auto-places basic zones using the team's abilities
+- Can be partially or fully overridden as players learn
+
+### Draft Mode as Onboarding
+
+Draft mode naturally teaches the Phenom roster one pick at a time. Players learn what Phenoms do by picking them, playing them, and seeing opponents use them. This is the best organic learning tool for roster knowledge.
+
+### Progressive Reveal
+
+Systems are introduced through play, not menus:
+- First matches: focus on pitching and batting (the fun core)
+- Zone reveals teach zone mechanics through dramatic in-game moments
+- Tactical phases introduce themselves at breakpoints -- players see the pause, make a few choices, and play continues
+- Faction synergies surface through UI hints ("2-piece Inferno bonus active!")
+- Matchmaking ensures new players face other new players (with bot backfill if needed for queue health)
+
+## 11. Reconnection & Match Integrity
+
+- **Reconnection system** for disconnected players -- critical for 12-18 minute matches and especially Bo3 sessions at 36-54 minutes
+- **Pause system** for competitive play -- limited pauses per player per game
+- **Abandon penalties** to discourage rage-quitting
+- **AI takeover** during disconnection -- bot plays the disconnected player's team until they reconnect
+- Details TBD during network architecture design
+
+## 12. Open Design Questions
 
 Items to resolve during prototyping and further design iteration:
 
@@ -314,8 +404,13 @@ Items to resolve during prototyping and further design iteration:
 - **Faction definitions** -- how many factions, their thematic identities, and specific synergy bonuses
 - **Starting roster size** -- how many base Phenoms ship in the initial release
 - **Zone ability budget** -- how many zones can each player place per inning, resource costs
-- **Momentum meter tuning** -- how fast it swings, thresholds for tactical phase timer modifications
+- **Momentum meter tuning** -- how fast it swings, thresholds for power bonuses and information reveals
+- **Rally mechanic specifics** -- exactly what information advantages the trailing team receives and at what momentum thresholds
 - **Pitching/batting input mechanics** -- specific control schemes for pitch selection, swing timing, fielding
 - **Camera system details** -- default view, wide tactical view toggle, transitions between phases
+- **Tactical time pool values** -- base pool size per rank tier, drain rates, degraded-control behavior on exhaustion
+- **Deeper tactical systems** -- Phenom-to-Phenom interactions, conditional triggers, counter-play, active baserunning, stadium strategy (see Section 6 expansion areas)
+- **Spectator experience design** -- delayed reveals, tension indicators, caster tools beyond simple perspective toggle
 - **Netcode architecture** -- rollback vs. lockstep, server authority model for competitive integrity
 - **Anti-cheat considerations** -- fog of war requires server-side zone state, clients should never receive opponent zone data until triggered
+- **Variant earn rate tuning** -- ensuring active players build competitive collections without feeling gated
