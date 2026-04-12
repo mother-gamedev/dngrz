@@ -253,7 +253,7 @@ Beyond basic zone placement, the tactical layer needs to grow to include:
 - **Pitch/bat ability modifications** -- Phenom abilities that change the duel itself, not just the field
 - **Stadium selection as strategy** -- field properties that interact with faction strengths
 
-These systems will be designed through prototyping once the core baseball gameplay is solid.
+These systems will be designed through prototyping once the core baseball gameplay is solid. **This is the first major design milestone after the core prototype** -- the tactical depth layer cannot remain "TBD" indefinitely. Once pitch/bat feels good, the next sprint is dedicated to designing and testing these interactions.
 
 ### Broadcast & Spectator Design
 
@@ -413,4 +413,4 @@ Items to resolve during prototyping and further design iteration:
 - **Spectator experience design** -- delayed reveals, tension indicators, caster tools beyond simple perspective toggle
 - **Netcode architecture** -- rollback vs. lockstep, server authority model for competitive integrity
 - **Anti-cheat considerations** -- fog of war requires server-side zone state, clients should never receive opponent zone data until triggered
-- **Variant earn rate tuning** -- ensuring active players build competitive collections without feeling gated
+- **Variant earn rate tuning** -- ensuring active players naturally build competitive collections through normal play; competitive-level players should have a full variant pool well before they need it for sideboarding at Platinum+
