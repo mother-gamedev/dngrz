@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://b_diamond_001"]
+
+[ext_resource type="Script" path="res://scenes/ui/components/diamond_mini.gd" id="1_dm"]
+
+[node name="DiamondMini" type="Control"]
+custom_minimum_size = Vector2(80, 80)
+script = ExtResource("1_dm")

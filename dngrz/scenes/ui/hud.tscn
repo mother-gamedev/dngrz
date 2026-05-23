@@ -1,0 +1,88 @@
+[gd_scene load_steps=8 format=3 uid="uid://b_hud_001"]
+
+[ext_resource type="Script" path="res://scenes/ui/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/scoreboard.tscn" id="2_sb"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/phase_indicator.tscn" id="3_phase"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/diamond_mini.tscn" id="4_diamond"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/momentum_bar.tscn" id="5_momentum"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/zone_list.tscn" id="6_zonelist"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/tactical_clock.tscn" id="7_tclock"]
+
+[node name="HUD" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 96.0
+alignment = 1
+
+[node name="Scoreboard" parent="TopBar" instance=ExtResource("2_sb")]
+
+[node name="TopLeft" type="PanelContainer" parent="."]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 200.0
+offset_bottom = 144.0
+
+[node name="Phase" parent="TopLeft" instance=ExtResource("3_phase")]
+
+[node name="TopRight" type="PanelContainer" parent="."]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 144.0
+
+[node name="Diamond" parent="TopRight" instance=ExtResource("4_diamond")]
+
+[node name="LeftEdge" type="VBoxContainer" parent="."]
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 24.0
+offset_top = -120.0
+offset_right = 200.0
+offset_bottom = 120.0
+
+[node name="PitcherCard" type="Control" parent="LeftEdge"]
+custom_minimum_size = Vector2(150, 210)
+
+[node name="RightEdge" type="VBoxContainer" parent="."]
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -120.0
+offset_right = -24.0
+offset_bottom = 120.0
+
+[node name="BatterCard" type="Control" parent="RightEdge"]
+custom_minimum_size = Vector2(150, 210)
+
+[node name="Bottom" type="HBoxContainer" parent="."]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -120.0
+offset_right = -24.0
+offset_bottom = -24.0
+alignment = 1
+
+[node name="Clocks" type="HBoxContainer" parent="Bottom"]
+
+[node name="You" parent="Bottom/Clocks" instance=ExtResource("7_tclock")]
+label_text = "YOU"
+
+[node name="Opp" parent="Bottom/Clocks" instance=ExtResource("7_tclock")]
+label_text = "OPP"
+
+[node name="Momentum" parent="Bottom" instance=ExtResource("5_momentum")]
+
+[node name="Zones" parent="Bottom" instance=ExtResource("6_zonelist")]

@@ -1,0 +1,47 @@
+[gd_scene load_steps=2 format=3 uid="uid://b_scoreboard_001"]
+
+[ext_resource type="Script" path="res://scenes/ui/components/scoreboard.gd" id="1_sb"]
+
+[node name="Scoreboard" type="PanelContainer"]
+custom_minimum_size = Vector2(580, 80)
+script = ExtResource("1_sb")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+
+[node name="Away" type="VBoxContainer" parent="HBox"]
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="HBox/Away"]
+text = "AWAY"
+
+[node name="Score" type="Label" parent="HBox/Away"]
+text = "0"
+
+[node name="HE" type="Label" parent="HBox/Away"]
+text = "H0 E0"
+
+[node name="Center" type="VBoxContainer" parent="HBox"]
+size_flags_horizontal = 3
+
+[node name="Inning" type="Label" parent="HBox/Center"]
+text = "TOP 1"
+horizontal_alignment = 1
+
+[node name="Count" type="Label" parent="HBox/Center"]
+text = "0-0  0 OUT"
+horizontal_alignment = 1
+
+[node name="Home" type="VBoxContainer" parent="HBox"]
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="HBox/Home"]
+text = "HOME"
+horizontal_alignment = 2
+
+[node name="Score" type="Label" parent="HBox/Home"]
+text = "0"
+horizontal_alignment = 2
+
+[node name="HE" type="Label" parent="HBox/Home"]
+text = "H0 E0"
+horizontal_alignment = 2

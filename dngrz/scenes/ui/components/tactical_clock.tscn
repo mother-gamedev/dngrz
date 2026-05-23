@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3 uid="uid://b_tclock_001"]
+
+[ext_resource type="Script" path="res://scenes/ui/components/tactical_clock.gd" id="1_tc"]
+
+[node name="TacticalClock" type="PanelContainer"]
+custom_minimum_size = Vector2(120, 80)
+script = ExtResource("1_tc")
+
+[node name="V" type="VBoxContainer" parent="."]
+
+[node name="Label" type="Label" parent="V"]
+text = "YOU"
+
+[node name="Time" type="Label" parent="V"]
+text = "—"

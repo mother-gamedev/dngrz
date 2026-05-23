@@ -1,0 +1,29 @@
+[gd_scene load_steps=2 format=3 uid="uid://b_phase_001"]
+
+[ext_resource type="Script" path="res://scenes/ui/components/phase_indicator.gd" id="1_phase"]
+
+[node name="PhaseIndicator" type="PanelContainer"]
+custom_minimum_size = Vector2(160, 90)
+script = ExtResource("1_phase")
+
+[node name="V" type="VBoxContainer" parent="."]
+
+[node name="Label" type="Label" parent="V"]
+text = "PHASE"
+
+[node name="Current" type="Label" parent="V"]
+text = "PITCH"
+
+[node name="Crumbs" type="HBoxContainer" parent="V"]
+
+[node name="Dot0" type="ColorRect" parent="V/Crumbs"]
+custom_minimum_size = Vector2(16, 16)
+
+[node name="Dot1" type="ColorRect" parent="V/Crumbs"]
+custom_minimum_size = Vector2(16, 16)
+
+[node name="Dot2" type="ColorRect" parent="V/Crumbs"]
+custom_minimum_size = Vector2(16, 16)
+
+[node name="Dot3" type="ColorRect" parent="V/Crumbs"]
+custom_minimum_size = Vector2(16, 16)

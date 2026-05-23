@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://b_momentum_001"]
+
+[ext_resource type="Script" path="res://scenes/ui/components/momentum_bar.gd" id="1_mb"]
+
+[node name="MomentumBar" type="PanelContainer"]
+custom_minimum_size = Vector2(380, 56)
+script = ExtResource("1_mb")
+
+[node name="Label" type="Label" parent="."]
+text = "MOMENTUM"
