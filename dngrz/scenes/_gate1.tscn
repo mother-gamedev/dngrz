@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://b_gate1_001"]
+[gd_scene load_steps=11 format=3 uid="uid://b_gate1_001"]
 
 [ext_resource type="Script" path="res://scenes/_gate1.gd" id="1_gate"]
 [ext_resource type="PackedScene" path="res://scenes/field.tscn" id="2_field"]
@@ -8,6 +8,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="6_hud"]
 [ext_resource type="Script" path="res://src/pitcher/pitcher_ai.gd" id="7_pai"]
 [ext_resource type="Script" path="res://src/batter/batter_ai.gd" id="8_bai"]
+[ext_resource type="PackedScene" path="res://scenes/ui/pitching_view.tscn" id="9_pview"]
+[ext_resource type="PackedScene" path="res://scenes/ui/batting_view.tscn" id="10_bview"]
 
 [node name="Gate1" type="Node3D"]
 script = ExtResource("1_gate")
@@ -32,3 +34,36 @@ transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.258819, 0, -0.258819, 0.9659258
 [node name="HUDLayer" type="CanvasLayer" parent="."]
 
 [node name="HUD" parent="HUDLayer" instance=ExtResource("6_hud")]
+
+[node name="PitchingView" parent="HUDLayer" instance=ExtResource("9_pview")]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -300.0
+offset_right = 190.0
+offset_bottom = 300.0
+mouse_filter = 2
+
+[node name="BattingView" parent="HUDLayer" instance=ExtResource("10_bview")]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -340.0
+offset_right = 220.0
+offset_bottom = 340.0
+mouse_filter = 2
+
+[node name="ControlsLayer" type="CanvasLayer" parent="."]
+
+[node name="ControlsLabel" type="Label" parent="ControlsLayer"]
+offset_left = 16.0
+offset_top = 700.0
+offset_right = 1140.0
+offset_bottom = 720.0
+text = "PITCH: Q=FB W=CB E=SL R=CH | WASD=aim | SPACE=throw      BAT: arrows=cursor | ENTER=swing      (set enable_pitcher_ai / enable_batter_ai on Gate1 inspector)"
+horizontal_alignment = 1

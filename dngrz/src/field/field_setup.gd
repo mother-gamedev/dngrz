@@ -14,7 +14,7 @@ func _ready() -> void:
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.4, 0.5, 0.6)
 	environment.ambient_light_energy = 0.5
-	environment.tonemap_mode = Environment.TONE_MAP_ACES
+	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
 	environment.background_mode = Environment.BG_COLOR
 	environment.background_color = Color(0.5, 0.7, 1.0)
 	env.environment = environment
