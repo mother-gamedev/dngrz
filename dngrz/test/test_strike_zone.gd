@@ -36,3 +36,33 @@ func test_plate_position_returns_normalized() -> void:
 	var normalized := StrikeZone.get_plate_position(center)
 	assert_float(normalized.x).is_equal_approx(0.0, 0.1)
 	assert_float(normalized.y).is_equal_approx(0.0, 0.1)
+
+func test_exact_top_edge_is_strike() -> void:
+	var half_w := FieldConstants.STRIKE_ZONE_WIDTH / 2.0
+	var edge := Vector3(half_w, FieldConstants.STRIKE_ZONE_TOP, 0.0)
+	assert_bool(StrikeZone.is_strike(edge)).is_true()
+
+func test_exact_bottom_edge_is_strike() -> void:
+	var half_w := FieldConstants.STRIKE_ZONE_WIDTH / 2.0
+	var edge := Vector3(-half_w, FieldConstants.STRIKE_ZONE_BOTTOM, 0.0)
+	assert_bool(StrikeZone.is_strike(edge)).is_true()
+
+func test_plate_position_at_top_right_edge_is_one_one() -> void:
+	var half_w := FieldConstants.STRIKE_ZONE_WIDTH / 2.0
+	var edge := Vector3(half_w, FieldConstants.STRIKE_ZONE_TOP, 0.0)
+	var normalized := StrikeZone.get_plate_position(edge)
+	assert_float(normalized.x).is_equal_approx(1.0, 0.001)
+	assert_float(normalized.y).is_equal_approx(1.0, 0.001)
+
+func test_plate_position_at_bottom_left_edge_is_negative_one() -> void:
+	var half_w := FieldConstants.STRIKE_ZONE_WIDTH / 2.0
+	var edge := Vector3(-half_w, FieldConstants.STRIKE_ZONE_BOTTOM, 0.0)
+	var normalized := StrikeZone.get_plate_position(edge)
+	assert_float(normalized.x).is_equal_approx(-1.0, 0.001)
+	assert_float(normalized.y).is_equal_approx(-1.0, 0.001)
+
+func test_well_outside_top_with_epsilon_still_ball() -> void:
+	# Guard that the epsilon doesn't silently widen the zone in a perceptible way.
+	# A pitch 1cm above the top must still be a ball.
+	var above := Vector3(0.0, FieldConstants.STRIKE_ZONE_TOP + 0.01, 0.0)
+	assert_bool(StrikeZone.is_strike(above)).is_false()
