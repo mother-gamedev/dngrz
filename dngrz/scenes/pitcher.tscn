@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b_pitcher_001"]
+
+[ext_resource type="Script" path="res://src/pitcher/pitcher_controller.gd" id="1_pitcher"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_marker"]
+radius = 0.05
+height = 0.1
+
+[node name="Pitcher" type="Node3D"]
+script = ExtResource("1_pitcher")
+
+[node name="TargetMarker" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_marker")
+visible = false
