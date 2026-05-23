@@ -1,0 +1,28 @@
+[gd_resource type="Theme" load_steps=4 format=3]
+
+[ext_resource type="FontFile" path="res://themes/fonts/inter_tight_regular.ttf" id="1_inter"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.078, 0.102, 0.173, 1)
+border_color = Color(0.165, 0.2, 0.286, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.11, 0.137, 0.22, 1)
+border_color = Color(0.165, 0.2, 0.286, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+
+[resource]
+default_font = ExtResource("1_inter")
+default_font_size = 14
+Button/colors/font_color = Color(0.953, 0.961, 0.984, 1)
+Button/styles/normal = SubResource("StyleBoxFlat_button")
+Label/colors/font_color = Color(0.953, 0.961, 0.984, 1)
+Panel/styles/panel = SubResource("StyleBoxFlat_panel")
+PanelContainer/styles/panel = SubResource("StyleBoxFlat_panel")

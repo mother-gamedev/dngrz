@@ -14,6 +14,14 @@ config/name="DNGRZ"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+Colors="*res://themes/colors.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
+
+[gui]
+
+theme/custom="res://themes/dngrz_theme.tres"

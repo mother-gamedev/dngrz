@@ -1,0 +1,65 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://themes/styles/chamfered_button.gd" id="1_chamfer"]
+[ext_resource type="FontFile" path="res://themes/fonts/archivo_black.ttf" id="2_archivo"]
+[ext_resource type="FontFile" path="res://themes/fonts/jetbrains_mono_regular.ttf" id="3_jetbrains"]
+
+[node name="ThemePreview" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="VBox" type="VBoxContainer" parent="."]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 1000.0
+offset_bottom = 800.0
+
+[node name="Title" type="Label" parent="VBox"]
+text = "DNGRZ"
+theme_override_fonts/font = ExtResource("2_archivo")
+theme_override_font_sizes/font_size = 48
+theme_override_colors/font_color = Color(1, 0.8, 0, 1)
+
+[node name="Body" type="Label" parent="VBox"]
+text = "Inter Tight body text"
+
+[node name="Stats" type="Label" parent="VBox"]
+text = "STATS 88 . 62"
+theme_override_fonts/font = ExtResource("3_jetbrains")
+theme_override_font_sizes/font_size = 16
+
+[node name="HBox" type="HBoxContainer" parent="VBox"]
+
+[node name="BrandButton" type="Button" parent="VBox/HBox"]
+custom_minimum_size = Vector2(180, 48)
+script = ExtResource("1_chamfer")
+fill_color = Color(1, 0.8, 0, 1)
+hover_color = Color(1, 0.706, 0, 1)
+text = "BRAND"
+
+[node name="CoolButton" type="Button" parent="VBox/HBox"]
+custom_minimum_size = Vector2(180, 48)
+script = ExtResource("1_chamfer")
+fill_color = Color(0.173, 0.816, 1, 1)
+hover_color = Color(0.118, 0.706, 0.9, 1)
+text = "COOL"
+
+[node name="HeatButton" type="Button" parent="VBox/HBox"]
+custom_minimum_size = Vector2(180, 48)
+script = ExtResource("1_chamfer")
+fill_color = Color(1, 0.239, 0.341, 1)
+hover_color = Color(0.9, 0.18, 0.27, 1)
+text = "HEAT"
+
+[node name="SamplePanel" type="Panel" parent="VBox"]
+custom_minimum_size = Vector2(400, 80)
+
+[node name="PanelText" type="Label" parent="VBox/SamplePanel"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 400.0
+offset_bottom = 64.0
+text = "Default panel with project theme"
