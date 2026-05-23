@@ -19,6 +19,9 @@ class PitchData:
 		drop = p_drop
 		accuracy = p_accuracy
 
+	func duplicate() -> PitchData:
+		return PitchData.new(speed, h_break, drop, accuracy)
+
 # Speeds in m/s (1 mph ~ 0.447 m/s)
 # Fastball ~95mph=42.5m/s, Curve ~80mph=35.8m/s, Slider ~87mph=38.9m/s, Change ~83mph=37.0m/s
 static var _pitches := {
@@ -29,9 +32,9 @@ static var _pitches := {
 }
 
 static func get_pitch(pitch_type: Type) -> PitchData:
-	return _pitches[pitch_type]
+	return _pitches[pitch_type].duplicate()
 
-static func get_name(pitch_type: Type) -> String:
+static func display_name(pitch_type: Type) -> String:
 	match pitch_type:
 		Type.FASTBALL: return "Fastball"
 		Type.CURVEBALL: return "Curveball"

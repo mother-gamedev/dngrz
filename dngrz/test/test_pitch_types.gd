@@ -22,3 +22,15 @@ func test_changeup_is_slower_than_fastball() -> void:
 	var fb := PitchTypes.get_pitch(PitchTypes.Type.FASTBALL)
 	var ch := PitchTypes.get_pitch(PitchTypes.Type.CHANGEUP)
 	assert_float(fb.speed - ch.speed).is_greater(5.0)
+
+func test_display_name_returns_human_names() -> void:
+	assert_str(PitchTypes.display_name(PitchTypes.Type.FASTBALL)).is_equal("Fastball")
+	assert_str(PitchTypes.display_name(PitchTypes.Type.CURVEBALL)).is_equal("Curveball")
+	assert_str(PitchTypes.display_name(PitchTypes.Type.SLIDER)).is_equal("Slider")
+	assert_str(PitchTypes.display_name(PitchTypes.Type.CHANGEUP)).is_equal("Changeup")
+
+func test_get_pitch_returns_independent_copy() -> void:
+	var a := PitchTypes.get_pitch(PitchTypes.Type.FASTBALL)
+	a.speed = 0.0
+	var b := PitchTypes.get_pitch(PitchTypes.Type.FASTBALL)
+	assert_float(b.speed).is_greater(0.0)
