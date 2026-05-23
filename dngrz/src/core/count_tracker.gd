@@ -14,6 +14,8 @@ func add_ball() -> void:
 	if balls >= 4:
 		walk.emit()
 
+# On the 3rd strike, this self-records the out via add_out().
+# Callers must not also call add_out() to avoid double-counting.
 func add_strike() -> void:
 	strikes += 1
 	if strikes >= 3:

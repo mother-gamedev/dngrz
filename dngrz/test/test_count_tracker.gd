@@ -67,3 +67,33 @@ func test_new_half_inning_resets_outs() -> void:
 	assert_int(_tracker.outs).is_equal(0)
 	assert_int(_tracker.balls).is_equal(0)
 	assert_int(_tracker.strikes).is_equal(0)
+
+func test_walk_signal_emits_on_fourth_ball() -> void:
+	var monitor := monitor_signals(_tracker)
+	for i in 4:
+		_tracker.add_ball()
+	await assert_signal(monitor).is_emitted("walk")
+
+func test_strikeout_signal_emits_on_third_strike() -> void:
+	var monitor := monitor_signals(_tracker)
+	for i in 3:
+		_tracker.add_strike()
+	await assert_signal(monitor).is_emitted("strikeout")
+
+func test_out_recorded_emits_per_out() -> void:
+	var monitor := monitor_signals(_tracker)
+	_tracker.add_out()
+	_tracker.add_out()
+	await assert_signal(monitor).is_emitted("out_recorded")
+
+func test_side_retired_emits_on_third_out() -> void:
+	var monitor := monitor_signals(_tracker)
+	for i in 3:
+		_tracker.add_out()
+	await assert_signal(monitor).is_emitted("side_retired")
+
+func test_no_walk_signal_on_third_ball() -> void:
+	var monitor := monitor_signals(_tracker)
+	for i in 3:
+		_tracker.add_ball()
+	await assert_signal(monitor).is_not_emitted("walk")
