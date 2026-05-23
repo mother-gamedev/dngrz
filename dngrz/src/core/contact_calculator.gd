@@ -2,7 +2,7 @@ class_name ContactCalculator
 
 # Tuning constants — Gate 1 will revisit these.
 const TIMING_WINDOW := 0.1         # seconds — perfect window is +/- this
-const WHIFF_THRESHOLD := 0.15      # combined timing + placement error that causes a miss
+const WHIFF_TOTAL_ERROR := 3.0     # normalized total_error (timing+placement) that triggers a whiff
 const PLACEMENT_WINDOW := 0.12     # meters — perfect placement window
 const BASE_EXIT_VELOCITY := 35.0   # m/s base exit velo on perfect contact
 const PITCH_SPEED_FACTOR := 0.3    # how much pitch speed adds to exit velo
@@ -35,11 +35,10 @@ static func calculate(timing_offset: float, placement_offset: Vector2, pitch_spe
 	var placement_error := placement_offset.length() / PLACEMENT_WINDOW
 	var total_error := timing_error + placement_error
 
-	# Whiff check: WHIFF_THRESHOLD is expressed in raw input units; convert to
-	# normalized error space by dividing by 0.05 (a "small reference window").
-	# Result: total_error > 3.0 triggers a whiff. The 0.05 magic number is
-	# preserved from the design spec — Gate 1 will retune it.
-	if total_error > WHIFF_THRESHOLD / 0.05:
+	# Whiff check: total_error is a sum of two normalized ratios (timing and
+	# placement each over their own window). When the sum exceeds the threshold,
+	# the swing is a miss. Gate 1 will retune.
+	if total_error > WHIFF_TOTAL_ERROR:
 		result.is_whiff = true
 		return result
 
