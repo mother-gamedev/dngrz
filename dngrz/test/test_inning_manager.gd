@@ -63,3 +63,47 @@ func test_game_over_walk_off_bottom_of_fifth() -> void:
 	_manager.add_run()  # home ties at 1
 	_manager.add_run()  # home leads 2-1
 	assert_bool(_manager.is_game_over()).is_true()
+
+func test_tied_game_in_bottom_of_fifth_is_not_over() -> void:
+	# Top 1 → ... → Bot 5
+	for i in 9:
+		_manager.advance_half_inning()
+	_manager.away_score = 1
+	_manager.add_run()  # home ties at 1
+	assert_bool(_manager.is_game_over()).is_false()
+
+func test_tied_game_advances_to_terminate() -> void:
+	# Same setup as above, then advance to inning 6 (game over by inning-limit)
+	for i in 9:
+		_manager.advance_half_inning()
+	_manager.away_score = 1
+	_manager.add_run()
+	_manager.advance_half_inning()  # now top of 6
+	assert_bool(_manager.is_game_over()).is_true()
+
+func test_game_over_signal_emits_on_walk_off() -> void:
+	var monitor := monitor_signals(_manager)
+	# Walk to bot 5
+	for i in 9:
+		_manager.advance_half_inning()
+	_manager.away_score = 1
+	_manager.add_run()  # 1-1
+	_manager.add_run()  # 2-1 home — walk-off
+	await assert_signal(monitor).is_emitted("game_over_signal")
+
+func test_game_over_signal_emits_on_natural_end() -> void:
+	var monitor := monitor_signals(_manager)
+	# 10 half-innings, no scoring (0-0 nobody wins, just expires)
+	for i in 10:
+		_manager.advance_half_inning()
+	await assert_signal(monitor).is_emitted("game_over_signal")
+
+func test_game_over_signal_does_not_emit_early() -> void:
+	var monitor := monitor_signals(_manager)
+	# Bot 4, home leading 5-0 — not over yet
+	for i in 7:
+		_manager.advance_half_inning()
+	_manager.away_score = 0
+	for i in 5:
+		_manager.add_run()  # home scoring 5 in bot 4
+	await assert_signal(monitor).is_not_emitted("game_over_signal")

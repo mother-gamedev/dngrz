@@ -18,20 +18,26 @@ func fielding_team() -> String:
 	return "home" if is_top else "away"
 
 func add_run() -> void:
+	var was_over := is_game_over()
 	if is_top:
 		away_score += 1
 		run_scored.emit("away")
 	else:
 		home_score += 1
 		run_scored.emit("home")
+	if not was_over and is_game_over():
+		game_over_signal.emit()
 
 func advance_half_inning() -> void:
+	var was_over := is_game_over()
 	if is_top:
 		is_top = false
 	else:
 		is_top = true
 		inning += 1
 	half_inning_changed.emit()
+	if not was_over and is_game_over():
+		game_over_signal.emit()
 
 func is_game_over() -> bool:
 	# Game ends after 5 full innings
