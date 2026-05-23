@@ -1,0 +1,75 @@
+[gd_scene load_steps=2 format=3 uid="uid://b_phenom_preview_001"]
+
+[ext_resource type="PackedScene" path="res://scenes/ui/phenom_card.tscn" id="1_card_scene"]
+
+[node name="PreviewRoot" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="FactionRow" type="HBoxContainer" parent="."]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 800.0
+offset_bottom = 260.0
+
+[node name="CardEmber" parent="FactionRow" instance=ExtResource("1_card_scene")]
+phenom_name = "ACE"
+initials = "P1"
+role = "ACE"
+positions = "P·OF"
+stats_line = "PWR 88 · CTC 62"
+
+[node name="CardVolt" parent="FactionRow" instance=ExtResource("1_card_scene")]
+faction = 1
+phenom_name = "OPS"
+initials = "P2"
+role = "OPS"
+positions = "P"
+stats_line = "PWR 64 · CTC 72"
+
+[node name="CardVerdant" parent="FactionRow" instance=ExtResource("1_card_scene")]
+faction = 2
+phenom_name = "MID"
+initials = "BOT"
+role = "MID"
+positions = "OF"
+stats_line = "PWR 70 · CTC 70"
+
+[node name="CardUmbra" parent="FactionRow" instance=ExtResource("1_card_scene")]
+faction = 3
+phenom_name = "CHAOS"
+initials = "GST"
+role = "CHAOS"
+positions = "1B"
+stats_line = "PWR 55 · CTC 80"
+
+[node name="SizeRow" type="HBoxContainer" parent="."]
+offset_left = 40.0
+offset_top = 300.0
+offset_right = 700.0
+offset_bottom = 620.0
+
+[node name="CardSm" parent="SizeRow" instance=ExtResource("1_card_scene")]
+size_variant = 0
+phenom_name = "SM"
+initials = "P1"
+role = "ACE"
+positions = "P·OF"
+stats_line = "PWR 88 · CTC 62"
+
+[node name="CardMd" parent="SizeRow" instance=ExtResource("1_card_scene")]
+size_variant = 1
+phenom_name = "MD"
+initials = "P1"
+role = "ACE"
+positions = "P·OF"
+stats_line = "PWR 88 · CTC 62"
+
+[node name="CardLg" parent="SizeRow" instance=ExtResource("1_card_scene")]
+size_variant = 2
+phenom_name = "LG"
+initials = "P1"
+role = "ACE"
+positions = "P·OF"
+stats_line = "PWR 88 · CTC 62"
