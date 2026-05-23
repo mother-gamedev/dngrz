@@ -1,0 +1,34 @@
+[gd_scene load_steps=9 format=3 uid="uid://b_gate1_001"]
+
+[ext_resource type="Script" path="res://scenes/_gate1.gd" id="1_gate"]
+[ext_resource type="PackedScene" path="res://scenes/field.tscn" id="2_field"]
+[ext_resource type="PackedScene" path="res://scenes/ball.tscn" id="3_ball"]
+[ext_resource type="PackedScene" path="res://scenes/pitcher.tscn" id="4_pitcher"]
+[ext_resource type="PackedScene" path="res://scenes/batter.tscn" id="5_batter"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="6_hud"]
+[ext_resource type="Script" path="res://src/pitcher/pitcher_ai.gd" id="7_pai"]
+[ext_resource type="Script" path="res://src/batter/batter_ai.gd" id="8_bai"]
+
+[node name="Gate1" type="Node3D"]
+script = ExtResource("1_gate")
+
+[node name="Field" parent="." instance=ExtResource("2_field")]
+
+[node name="Ball" parent="." instance=ExtResource("3_ball")]
+
+[node name="Pitcher" parent="." instance=ExtResource("4_pitcher")]
+
+[node name="PitcherAI" type="Node" parent="Pitcher"]
+script = ExtResource("7_pai")
+
+[node name="Batter" parent="." instance=ExtResource("5_batter")]
+
+[node name="BatterAI" type="Node" parent="Batter"]
+script = ExtResource("8_bai")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.258819, 0, -0.258819, 0.9659258, 0, 2.5, 3.0)
+
+[node name="HUDLayer" type="CanvasLayer" parent="."]
+
+[node name="HUD" parent="HUDLayer" instance=ExtResource("6_hud")]
