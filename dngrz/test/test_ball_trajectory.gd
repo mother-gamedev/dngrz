@@ -31,8 +31,8 @@ func test_curveball_drops_more() -> void:
 	# At endpoint, curveball should arrive lower than fastball due to drop
 	var fb_end := fb.get_position(fb.flight_duration)
 	var cv_end := cv.get_position(cv.flight_duration)
-	# Curveball should arrive lower than (or only slightly above) the fastball
-	assert_float(cv_end.y).is_less(fb_end.y + 0.1)
+	# Curveball must arrive strictly lower than the fastball at the plate
+	assert_float(cv_end.y).is_less(fb_end.y)
 
 func test_batted_ball_trajectory_goes_forward() -> void:
 	var traj := BallTrajectory.create_batted(
@@ -63,3 +63,24 @@ func test_ground_ball_stays_low() -> void:
 	)
 	var pos := traj.get_position(0.5)
 	assert_float(pos.y).is_less(1.0)
+
+func test_accuracy_below_one_introduces_spin_jitter() -> void:
+	# When accuracy < 1.0, create_pitch should add random jitter to spin_break.
+	# Run multiple trajectories at low accuracy and verify they differ from
+	# the deterministic (accuracy=1.0) baseline at least once.
+	var baseline := BallTrajectory.create_pitch(
+		PitchTypes.Type.FASTBALL,
+		Vector3(0.0, 0.8, 0.0),
+		1.0
+	)
+	var any_differs := false
+	for i in 20:
+		var jittered := BallTrajectory.create_pitch(
+			PitchTypes.Type.FASTBALL,
+			Vector3(0.0, 0.8, 0.0),
+			0.0  # max inaccuracy
+		)
+		if not jittered.spin_break.is_equal_approx(baseline.spin_break):
+			any_differs = true
+			break
+	assert_bool(any_differs).is_true()
