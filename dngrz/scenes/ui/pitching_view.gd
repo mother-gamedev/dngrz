@@ -19,7 +19,7 @@ class_name PitchingView extends Control
 
 const ZONE_SIZE := Vector2(280, 360)
 const SELECTOR_LABELS := ["FB", "CB", "SL", "CH"]
-const SELECTOR_BINDINGS := ["Q", "W", "E", "R"]
+const SELECTOR_BINDINGS := ["1", "2", "3", "4"]
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(380, 600)
@@ -58,9 +58,11 @@ func _draw() -> void:
 		var yy := zone_top + ZONE_SIZE.y * float(i) / 3.0
 		_draw_dashed_line(Vector2(zone_left, yy), Vector2(zone_left + ZONE_SIZE.x, yy), Colors.CHALK, 1.5)
 
-	# Aim cursor inside zone
+	# Aim cursor inside zone.
+	# aim_position uses +Y = high (world/strike-zone convention); screen Y is
+	# +down, so negate Y here to render a high pitch toward the top of the zone.
 	var zone_center := zone_rect.get_center()
-	var cursor_pos := zone_center + aim_position * (ZONE_SIZE * 0.5)
+	var cursor_pos := zone_center + Vector2(aim_position.x, -aim_position.y) * (ZONE_SIZE * 0.5)
 	var accuracy_ring_radius := 24.0 / clampf(accuracy, 0.05, 1.0)
 	draw_arc(cursor_pos, accuracy_ring_radius, 0.0, TAU, 32, Colors.BRAND_HOT, 1.5)
 	draw_circle(cursor_pos, 8.0, Colors.BRAND)

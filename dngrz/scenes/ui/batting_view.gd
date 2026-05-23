@@ -86,7 +86,8 @@ func _draw_timing_meter(center_x: float, y: float) -> void:
 
 func _zone_to_screen(zone_pos: Vector2, zone_rect: Rect2) -> Vector2:
 	var clamped := Vector2(clampf(zone_pos.x, -1.0, 1.0), clampf(zone_pos.y, -1.0, 1.0))
-	return zone_rect.get_center() + clamped * (zone_rect.size * 0.5)
+	# Zone data uses +Y = high; screen Y is +down, so negate Y for display.
+	return zone_rect.get_center() + Vector2(clamped.x, -clamped.y) * (zone_rect.size * 0.5)
 
 func _draw_dashed_line(from: Vector2, to: Vector2, color: Color, width: float, dash_len: float = 6.0, gap_len: float = 4.0) -> void:
 	var diff := to - from

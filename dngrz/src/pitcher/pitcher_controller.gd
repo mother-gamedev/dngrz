@@ -1,8 +1,7 @@
 extends Node3D
 
-# NOTE: W is intentionally dual-bound to both `pitch_curveball` (one-shot, handled
-# in _unhandled_input) and `aim_up` (continuous, polled in _process). They cohabit
-# because the two contexts read different input modes — this is per the v1 plan.
+# Pitch type select (1/2/3/4) is handled one-shot in _unhandled_input; aim
+# (WASD) is polled continuously in _process. No keys are shared between them.
 
 signal pitch_executed(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float)
 

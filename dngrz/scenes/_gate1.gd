@@ -35,7 +35,7 @@ var _ball_trail: Array = []
 func _ready() -> void:
 	print("=========================================")
 	print("DNGRZ Gate 1 — feel-test scene")
-	print("PITCH controls: Q=Fastball  W=Curveball  E=Slider  R=Changeup")
+	print("PITCH controls: 1=Fastball  2=Curveball  3=Slider  4=Changeup")
 	print("                WASD = aim    Space = throw")
 	print("BAT   controls: arrow keys = cursor    Enter = swing")
 	print("AI toggles: enable_pitcher_ai / enable_batter_ai on Gate1 inspector")
