@@ -36,11 +36,16 @@ func decide(predicted_ball_at_plate: Vector3, balls: int, strikes: int) -> Decis
 #  5. Close-but-outside: 40% chase rate within 0.08m of zone.
 #  6. Default outside: 5% chase rate (looking for the rare bat-at-anything).
 func _should_swing(ball: Vector3, in_zone: bool, balls: int, strikes: int) -> bool:
+	# Way-outside-zone: a ball more than 0.3m from the zone is "obviously" a
+	# ball. Nobody swings. Deterministic to keep the contract clean.
+	var d := _distance_outside_zone(ball)
+	if not in_zone and d > 0.3:
+		return false
+
 	if in_zone and strikes == 2:
 		return true
 	if in_zone:
 		return randf() < 0.85
-	var d := _distance_outside_zone(ball)
 	if strikes == 2 and d < 0.15:
 		return randf() < 0.75
 	if balls >= 3:
