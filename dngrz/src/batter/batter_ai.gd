@@ -25,7 +25,19 @@ func decide(predicted_ball_at_plate: Vector3, balls: int, strikes: int) -> Decis
 	var placement := _swing_placement()
 	return Decision.new(true, timing, placement)
 
+# Decision priorities, highest to lowest:
+#  1. Protect the plate: at 2 strikes, ALWAYS swing at in-zone pitches.
+#     This is realistic baseball (a real batter never takes a hittable strike
+#     with 2 strikes) and makes test_swings_at_strike_with_two_strikes
+#     deterministic.
+#  2. Otherwise in zone: 85% swing rate (occasional take-for-look).
+#  3. 2-strike protection on borderline: 75% chase rate within 0.15m of zone.
+#  4. 3-ball discipline: only 5% chase rate outside the zone.
+#  5. Close-but-outside: 40% chase rate within 0.08m of zone.
+#  6. Default outside: 5% chase rate (looking for the rare bat-at-anything).
 func _should_swing(ball: Vector3, in_zone: bool, balls: int, strikes: int) -> bool:
+	if in_zone and strikes == 2:
+		return true
 	if in_zone:
 		return randf() < 0.85
 	var d := _distance_outside_zone(ball)
@@ -51,6 +63,11 @@ func _swing_timing() -> float:
 	var spread := lerpf(0.08, 0.015, skill)
 	return randf_range(-spread, spread)
 
+# Placement noise around the ball's center. X is symmetric (pull/push spread).
+# Y is intentionally asymmetric — biased slightly toward hitting *under* the
+# ball (positive Y in plate-coords = swing cursor below ball = higher launch
+# angle). Real batters lift more often than they bury, and Gate 1 will
+# evaluate whether this produces too many fly outs.
 func _swing_placement() -> Vector2:
 	var noise_scale := lerpf(0.1, 0.02, skill)
 	return Vector2(
