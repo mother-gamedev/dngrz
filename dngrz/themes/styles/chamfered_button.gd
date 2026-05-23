@@ -25,7 +25,7 @@ func _update_polygon() -> void:
 	if _polygon == null: return
 	var w := size.x
 	var h := size.y
-	var n := notch_px
+	var n := minf(notch_px, w * 0.5)
 	_polygon.polygon = PackedVector2Array([
 		Vector2(0, 0),
 		Vector2(w - n, 0),
