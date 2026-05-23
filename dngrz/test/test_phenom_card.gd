@@ -35,11 +35,11 @@ func test_lg_size() -> void:
 
 func test_initials_displayed() -> void:
 	var card := CARD_SCENE.instantiate()
-	card.initials = "P1"
+	card.initials = "XY"
 	add_child(card)
 	await get_tree().process_frame
 	var label := card.get_node("Portrait/Initials") as Label
-	assert_str(label.text).is_equal("P1")
+	assert_str(label.text).is_equal("XY")
 	card.queue_free()
 
 func test_faction_color_applied_to_header() -> void:

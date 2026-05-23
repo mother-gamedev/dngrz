@@ -14,6 +14,9 @@ const INITIAL_FONT_SIZES := {
 	SizeVariant.LG: 56,
 }
 
+const _ARCHIVO := preload("res://themes/fonts/archivo_black.ttf")
+const _MONO := preload("res://themes/fonts/jetbrains_mono_regular.ttf")
+
 @export var size_variant: SizeVariant = SizeVariant.MD:
 	set(v):
 		size_variant = v
@@ -69,17 +72,14 @@ func _apply() -> void:
 	var initials_label := $Portrait/Initials as Label
 	initials_label.text = initials
 	initials_label.add_theme_font_size_override("font_size", INITIAL_FONT_SIZES[size_variant])
-	var archivo := load("res://themes/fonts/archivo_black.ttf") as Font
-	if archivo != null:
-		initials_label.add_theme_font_override("font", archivo)
+	initials_label.add_theme_font_override("font", _ARCHIVO)
 
 	# Name
 	var name_sb := StyleBoxFlat.new()
 	name_sb.bg_color = Colors.BG_CARD
 	($NameLockup as Panel).add_theme_stylebox_override("panel", name_sb)
 	($NameLockup/Name as Label).text = phenom_name
-	if archivo != null:
-		($NameLockup/Name as Label).add_theme_font_override("font", archivo)
+	($NameLockup/Name as Label).add_theme_font_override("font", _ARCHIVO)
 
 	# Stats
 	var stats_sb := StyleBoxFlat.new()
@@ -87,7 +87,5 @@ func _apply() -> void:
 	($Stats as Panel).add_theme_stylebox_override("panel", stats_sb)
 	($Stats/Positions as Label).text = positions
 	($Stats/StatsLine as Label).text = stats_line
-	var mono := load("res://themes/fonts/jetbrains_mono_regular.ttf") as Font
-	if mono != null:
-		($Stats/Positions as Label).add_theme_font_override("font", mono)
-		($Stats/StatsLine as Label).add_theme_font_override("font", mono)
+	($Stats/Positions as Label).add_theme_font_override("font", _MONO)
+	($Stats/StatsLine as Label).add_theme_font_override("font", _MONO)
