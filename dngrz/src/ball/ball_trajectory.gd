@@ -2,6 +2,12 @@ class_name BallTrajectory
 
 const GRAVITY := Vector3(0.0, -9.81, 0.0)
 
+# Gate 1 feel knob. Real pitch physics puts a fastball at the plate in ~0.44s —
+# unhittable for a human. This multiplies pitch flight time into a readable swing
+# window while keeping the ball crossing the same target. 1.0 = bare realism;
+# raise to slow pitches further. Tune this during the Gate 1 feel-test.
+const PITCH_TIME_SCALE := 2.5
+
 var start_position: Vector3
 var initial_velocity: Vector3
 var spin_break: Vector3       # lateral/vertical break from spin (for pitches)
@@ -28,9 +34,10 @@ static func create_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy:
 	var pitch_data := PitchTypes.get_pitch(pitch_type)
 	traj.start_position = FieldConstants.MOUND + Vector3(0.0, 1.8, 0.0)  # release point
 
-	# Flight time based on speed and distance
+	# Flight time based on speed and distance, slowed by PITCH_TIME_SCALE so the
+	# swing window is human-readable (bare realism is ~0.44s — unhittable).
 	var distance := traj.start_position.distance_to(target)
-	traj.flight_duration = distance / pitch_data.speed
+	traj.flight_duration = (distance / pitch_data.speed) * PITCH_TIME_SCALE
 
 	# Initial velocity to reach target (accounting for gravity).
 	# target = start + v*t + 0.5*g*t^2  =>  v = (target - start - 0.5*g*t^2) / t

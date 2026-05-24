@@ -20,6 +20,14 @@ func test_pitch_reaches_plate() -> void:
 	var at_plate := traj.get_position(traj.flight_duration)
 	assert_float(at_plate.z).is_equal_approx(0.0, 1.0)
 
+func test_pitch_flight_is_playable() -> void:
+	# Gate 1 feel: raw MLB physics puts a fastball at the plate in ~0.44s, which is
+	# unhittable for a human. Flight must be slowed into a readable swing window.
+	# This guards against any regression back to bare realism.
+	var fb := BallTrajectory.create_pitch(PitchTypes.Type.FASTBALL, Vector3(0.0, 0.8, 0.0), 1.0)
+	assert_float(fb.flight_duration).is_greater(0.8)
+	assert_float(fb.flight_duration).is_less(2.0)
+
 func test_fastball_arrives_faster_than_changeup() -> void:
 	var fb := BallTrajectory.create_pitch(PitchTypes.Type.FASTBALL, Vector3(0.0, 0.8, 0.0), 1.0)
 	var ch := BallTrajectory.create_pitch(PitchTypes.Type.CHANGEUP, Vector3(0.0, 0.8, 0.0), 1.0)

@@ -34,6 +34,11 @@ func get_current_velocity() -> Vector3:
 		return _trajectory.get_velocity(_time)
 	return Vector3.ZERO
 
+func get_flight_duration() -> float:
+	if _trajectory:
+		return _trajectory.flight_duration
+	return 0.0
+
 func _process(delta: float) -> void:
 	if not _active:
 		return
