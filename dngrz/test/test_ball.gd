@@ -41,8 +41,9 @@ func test_pitch_arrived_signal_fires() -> void:
 	var fired := [false]
 	ball.pitch_arrived.connect(func(_p: Vector3) -> void: fired[0] = true)
 	ball.throw_pitch(PitchTypes.Type.FASTBALL, Vector3(0, 0.8, 0), 1.0)
-	# Fastball flight is ~0.43s; simulate enough frames via _process calls.
-	for i in 60:
+	# Fastball flight is ~1.09s at PITCH_TIME_SCALE=2.5; simulate enough frames
+	# via _process calls for the pitch to cross the plate (loop breaks on arrival).
+	for i in 120:
 		ball._process(0.016)  # ~16ms per simulated frame
 		if not ball.is_active():
 			break
