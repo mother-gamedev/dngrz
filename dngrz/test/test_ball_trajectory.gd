@@ -70,3 +70,20 @@ func test_different_seeds_diverge_at_low_accuracy() -> void:
 	var a := BallTrajectory.create_pitch(PitchTypes.Type.SLIDER, Vector3(0, 0.8, 0), 0.0, _seeded_rng(1))
 	var b := BallTrajectory.create_pitch(PitchTypes.Type.SLIDER, Vector3(0, 0.8, 0), 0.0, _seeded_rng(2))
 	assert_bool(a.spin_break.is_equal_approx(b.spin_break)).is_false()
+
+func test_predict_crossing_reaches_plate_plane() -> void:
+	var traj := BallTrajectory.create_pitch(PitchTypes.Type.FASTBALL, Vector3(0, 0.8, 0), 1.0, _seeded_rng())
+	var c := traj.predict_crossing(0.0)
+	assert_float(c.position.z).is_equal_approx(0.0, 0.01)
+
+func test_predict_crossing_time_matches_flight_duration() -> void:
+	var traj := BallTrajectory.create_pitch(PitchTypes.Type.FASTBALL, Vector3(0, 0.8, 0), 1.0, _seeded_rng())
+	var c := traj.predict_crossing(0.0)
+	assert_float(c.time).is_equal_approx(traj.flight_duration, 0.05)
+
+func test_predict_crossing_includes_break() -> void:
+	# Slider sweeps glove-side, so the crossing x is pulled off the authored
+	# target x (0.0) by the spin break — proving the query reflects movement.
+	var traj := BallTrajectory.create_pitch(PitchTypes.Type.SLIDER, Vector3(0, 0.8, 0), 1.0, _seeded_rng())
+	var c := traj.predict_crossing(0.0)
+	assert_float(absf(c.position.x)).is_greater(0.05)

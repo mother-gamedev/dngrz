@@ -14,6 +14,15 @@ var spin_break: Vector3       # lateral/vertical break from spin (for pitches)
 var flight_duration: float    # expected time to reach target (pitches) or land (batted)
 var is_pitch: bool
 
+# Result of predict_crossing(): where and when the ball crosses a plate plane.
+class CrossingPrediction:
+	var position: Vector3
+	var time: float
+
+	func _init(p_position: Vector3, p_time: float) -> void:
+		position = p_position
+		time = p_time
+
 func get_position(time: float) -> Vector3:
 	var pos := start_position + initial_velocity * time + 0.5 * GRAVITY * time * time
 	# Apply spin break as a quadratic curve that peaks at the end of flight
@@ -26,6 +35,19 @@ func get_position(time: float) -> Vector3:
 
 func get_velocity(time: float) -> Vector3:
 	return initial_velocity + GRAVITY * time
+
+# Analytic plate-plane crossing (spec §8). The z-motion is linear
+# (z(t) = start.z + vz*t — gravity and spin-break have no z-component), so the
+# crossing time is exact and the caller can address it by tick via SimClock.
+# Pure: no node state, no clock, no RNG. The returned position INCLUDES break.
+func predict_crossing(plane_z: float = 0.0) -> CrossingPrediction:
+	var vz := initial_velocity.z
+	if absf(vz) < 0.0001:
+		return CrossingPrediction.new(get_position(flight_duration), flight_duration)
+	var t := (plane_z - start_position.z) / vz
+	if t < 0.0:
+		t = flight_duration
+	return CrossingPrediction.new(get_position(t), t)
 
 static func create_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float, rng: RandomNumberGenerator) -> BallTrajectory:
 	var traj := BallTrajectory.new()
