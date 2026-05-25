@@ -44,6 +44,14 @@ func _ready() -> void:
 	_rng.randomize()
 	if _pitcher != null and _pitcher.has_signal("pitch_committed"):
 		_pitcher.pitch_committed.connect(_on_pitch_committed)
+	# Scene setup: the director owns actor placement in the world (as _gate1 did).
+	# Without this the batter and pitcher sit at the origin on top of each other.
+	if _batter != null:
+		_batter.position = Vector3(0.5, 0.0, 0.3)
+	if _pitcher != null:
+		_pitcher.position = FieldConstants.MOUND
+	print("[at_bat] joypads=", Input.get_connected_joypads(),
+		" name=", (Input.get_joy_name(0) if Input.get_connected_joypads().has(0) else "<none>"))
 
 func get_view_state() -> AtBatView:
 	return _view
@@ -143,6 +151,7 @@ func _present() -> void:
 		_view.observable_landing = StrikeZone.get_plate_position(bs.position)
 		if _ball != null:
 			_ball.position = bs.position
+			_ball.visible = true
 		# --- Bridge: push observable data into HUD view nodes ---
 		if _batting_view != null:
 			_batting_view.predicted_landing = _view.observable_landing
@@ -157,6 +166,8 @@ func _present() -> void:
 				_batting_view.aim_position = _batter.cursor()
 	if _phase == Phase.IDLE:
 		_view.ball_state = null
+		if _ball != null and _ball.has_method("reset"):
+			_ball.reset()
 		# --- Bridge: reset HUD view nodes on IDLE ---
 		if _batting_view != null:
 			_batting_view.predicted_landing = Vector2.ZERO
