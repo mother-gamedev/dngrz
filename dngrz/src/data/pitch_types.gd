@@ -21,8 +21,8 @@ class PitchData:
 	var drop: float           # additional downward break in meters
 	var accuracy: float       # base accuracy multiplier (0-1, higher = more forgiving)
 	var break_marker: Vector2 # normalized in-flight break cue shown to the batter (spec §8);
-	                          #   plate-plane convention: x = horizontal, +y = up. The honest,
-	                          #   observable hint of "what's coming" — the renderer is Plan 2.
+							  #   plate-plane convention: x = horizontal, +y = up. The honest,
+							  #   observable hint of "what's coming" — the renderer is Plan 2.
 	var tier: PitchTypes.Tier
 
 	func _init(p_speed: float, p_h_break: float, p_drop: float, p_accuracy: float,
