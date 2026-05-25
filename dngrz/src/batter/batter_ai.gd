@@ -1,58 +1,42 @@
 class_name BatterAI extends Node
 
-class Decision:
-	var swing: bool
-	var timing_offset: float
-	var placement: Vector2
+# Drives the at-bat from the SAME observable channel the human sees (a
+# BallStateAtTick — never the hidden PitchCommand/seed) and an explicitly-passed
+# seeded RNG (determinism contract #5). Produces the SwingCommand the director
+# resolves — one commit path with the human FSM.
 
-	func _init(s: bool, t: float, p: Vector2) -> void:
-		swing = s
-		timing_offset = t
-		placement = p
-
-@export var batter_controller: NodePath
 @export var enabled: bool = false
 @export var skill: float = 0.7  # 0..1
 
-# Pure decision function. `predicted_ball_at_plate` is the ball's predicted
-# position when it crosses the plate plane.
-func decide(predicted_ball_at_plate: Vector3, balls: int, strikes: int) -> Decision:
-	var in_zone := StrikeZone.is_strike(predicted_ball_at_plate)
-	var should := _should_swing(predicted_ball_at_plate, in_zone, balls, strikes)
-	if not should:
-		return Decision.new(false, 0.0, Vector2.ZERO)
-	var timing := _swing_timing()
-	var placement := _swing_placement()
-	return Decision.new(true, timing, placement)
+# Returns a SwingCommand to swing, or null to take. `observable` is the AI's read
+# of where the ball crosses; commit a few ticks before crossing, scaled by skill.
+func compute_command(observable: BallStateAtTick, crossing_tick: int, balls: int, strikes: int, rng: RandomNumberGenerator) -> SwingCommand:
+	var ball_pos := observable.position
+	var in_zone := StrikeZone.is_strike(ball_pos)
+	if not _should_swing(ball_pos, in_zone, balls, strikes, rng):
+		return null
+	var noise := lerpf(0.10, 0.02, skill)
+	var cursor := observable.plate_point() + Vector2(rng.randf_range(-noise, noise), rng.randf_range(-noise, noise))
+	var placement := Vector2(rng.randf_range(-0.6, 0.6), rng.randf_range(-0.3, 0.6))
+	var swing_type := SwingCommand.SwingType.CONTACT if rng.randf() < 0.7 else SwingCommand.SwingType.POWER
+	var latency := int(round(lerpf(8.0, 3.0, skill)))
+	return SwingCommand.new(cursor, swing_type, placement, crossing_tick - latency)
 
-# Decision priorities, highest to lowest:
-#  1. Protect the plate: at 2 strikes, ALWAYS swing at in-zone pitches.
-#     This is realistic baseball (a real batter never takes a hittable strike
-#     with 2 strikes) and makes test_swings_at_strike_with_two_strikes
-#     deterministic.
-#  2. Otherwise in zone: 85% swing rate (occasional take-for-look).
-#  3. 2-strike protection on borderline: 75% chase rate within 0.15m of zone.
-#  4. 3-ball discipline: only 5% chase rate outside the zone.
-#  5. Close-but-outside: 40% chase rate within 0.08m of zone.
-#  6. Default outside: 5% chase rate (looking for the rare bat-at-anything).
-func _should_swing(ball: Vector3, in_zone: bool, balls: int, strikes: int) -> bool:
-	# Way-outside-zone: a ball more than 0.3m from the zone is "obviously" a
-	# ball. Nobody swings. Deterministic to keep the contract clean.
+func _should_swing(ball: Vector3, in_zone: bool, balls: int, strikes: int, rng: RandomNumberGenerator) -> bool:
 	var d := _distance_outside_zone(ball)
 	if not in_zone and d > 0.3:
 		return false
-
 	if in_zone and strikes == 2:
 		return true
 	if in_zone:
-		return randf() < 0.85
+		return rng.randf() < 0.85
 	if strikes == 2 and d < 0.15:
-		return randf() < 0.75
+		return rng.randf() < 0.75
 	if balls >= 3:
-		return randf() < 0.05
+		return rng.randf() < 0.05
 	if d < 0.08:
-		return randf() < 0.4
-	return randf() < 0.05
+		return rng.randf() < 0.4
+	return rng.randf() < 0.05
 
 func _distance_outside_zone(ball: Vector3) -> float:
 	var half_w := FieldConstants.STRIKE_ZONE_WIDTH / 2.0
@@ -63,19 +47,3 @@ func _distance_outside_zone(ball: Vector3) -> float:
 	elif ball.y > FieldConstants.STRIKE_ZONE_TOP:
 		dy = ball.y - FieldConstants.STRIKE_ZONE_TOP
 	return Vector2(dx, dy).length()
-
-func _swing_timing() -> float:
-	var spread := lerpf(0.08, 0.015, skill)
-	return randf_range(-spread, spread)
-
-# Placement noise around the ball's center. X is symmetric (pull/push spread).
-# Y is intentionally asymmetric — biased slightly toward hitting *under* the
-# ball (positive Y in plate-coords = swing cursor below ball = higher launch
-# angle). Real batters lift more often than they bury, and Gate 1 will
-# evaluate whether this produces too many fly outs.
-func _swing_placement() -> Vector2:
-	var noise_scale := lerpf(0.1, 0.02, skill)
-	return Vector2(
-		randf_range(-noise_scale, noise_scale),
-		randf_range(-0.02, noise_scale * 0.5)
-	)

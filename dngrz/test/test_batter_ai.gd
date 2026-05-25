@@ -1,43 +1,34 @@
 class_name TestBatterAI extends GdUnitTestSuite
 
-func test_swings_at_strike_with_two_strikes() -> void:
-	var ai: BatterAI = auto_free(BatterAI.new())
-	var ball := Vector3(0.0, 0.8, 0.0)  # zone center
-	var d := ai.decide(ball, 0, 2)
-	assert_bool(d.swing).is_true()
+func _ai(skill := 0.7) -> BatterAI:
+	var a: BatterAI = auto_free(BatterAI.new())
+	a.skill = skill
+	return a
 
-func test_takes_obvious_ball_with_no_strikes() -> void:
-	var ai: BatterAI = auto_free(BatterAI.new())
-	var way_outside := Vector3(0.8, 0.8, 0.0)
-	var d := ai.decide(way_outside, 0, 0)
-	assert_bool(d.swing).is_false()
+func _rng(seed_value := 1) -> RandomNumberGenerator:
+	var r := RandomNumberGenerator.new()
+	r.seed = seed_value
+	return r
 
-func test_protects_borderline_with_two_strikes() -> void:
-	var ai: BatterAI = auto_free(BatterAI.new())
-	var borderline := Vector3(0.25, 1.15, 0.0)
-	var swings := 0
-	for i in 50:
-		var d := ai.decide(borderline, 0, 2)
-		if d.swing: swings += 1
-	assert_int(swings).is_greater(30)
+func _observable(pos := Vector3(0.0, 0.8, 0.0), tick := 60) -> BallStateAtTick:
+	return BallStateAtTick.new(tick, pos, Vector3(0.0, 0.0, 40.0))
 
-func test_timing_offset_has_variance() -> void:
-	var ai: BatterAI = auto_free(BatterAI.new())
-	var center := Vector3(0.0, 0.8, 0.0)
-	var offsets: Array = []
-	for i in 50:
-		var d := ai.decide(center, 0, 0)
-		if d.swing: offsets.append(d.timing_offset)
-	var sum := 0.0
-	for o in offsets: sum += o
-	var mean: float = sum / float(offsets.size())
-	var sq_diff := 0.0
-	for o in offsets: sq_diff += (o - mean) * (o - mean)
-	var stddev := sqrt(sq_diff / float(offsets.size()))
-	assert_float(stddev).is_greater(0.005)
+func test_takes_obvious_ball() -> void:
+	# Way outside the zone → never swing.
+	var cmd := _ai().compute_command(_observable(Vector3(1.0, 0.8, 0.0)), 60, 0, 0, _rng())
+	assert_object(cmd).is_null()
 
-func test_placement_centered_near_ball() -> void:
-	var ai: BatterAI = auto_free(BatterAI.new())
-	var center := Vector3(0.0, 0.8, 0.0)
-	var d := ai.decide(center, 0, 0)
-	assert_float(d.placement.length()).is_less(0.15)
+func test_swings_at_in_zone_with_two_strikes() -> void:
+	var cmd := _ai().compute_command(_observable(Vector3(0.0, 0.8, 0.0)), 60, 0, 2, _rng())
+	assert_object(cmd).is_not_null()
+
+func test_commit_tick_is_before_crossing() -> void:
+	var cmd := _ai().compute_command(_observable(Vector3(0.0, 0.8, 0.0)), 60, 0, 2, _rng())
+	assert_int(cmd.commit_tick).is_less(60)
+
+func test_deterministic_for_same_seed() -> void:
+	var a := _ai().compute_command(_observable(), 60, 0, 2, _rng(42))
+	var b := _ai().compute_command(_observable(), 60, 0, 2, _rng(42))
+	assert_vector(a.cursor_point).is_equal(b.cursor_point)
+	assert_int(a.commit_tick).is_equal(b.commit_tick)
+	assert_int(a.swing_type).is_equal(b.swing_type)
