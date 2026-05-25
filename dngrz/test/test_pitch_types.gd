@@ -34,3 +34,19 @@ func test_get_pitch_returns_independent_copy() -> void:
 	a.speed = 0.0
 	var b := PitchTypes.get_pitch(PitchTypes.Type.FASTBALL)
 	assert_float(b.speed).is_greater(0.0)
+
+func test_pitches_have_break_markers() -> void:
+	var curve := PitchTypes.get_pitch(PitchTypes.Type.CURVEBALL)
+	assert_float(curve.break_marker.y).is_less(0.0)  # curve breaks downward
+	var slider := PitchTypes.get_pitch(PitchTypes.Type.SLIDER)
+	assert_float(slider.break_marker.x).is_less(0.0)  # slider sweeps glove-side
+
+func test_all_pitches_are_basic_tier() -> void:
+	for pitch_type in PitchTypes.Type.values():
+		assert_int(PitchTypes.get_pitch(pitch_type).tier).is_equal(PitchTypes.Tier.BASIC)
+
+func test_duplicate_preserves_new_fields() -> void:
+	var a := PitchTypes.get_pitch(PitchTypes.Type.SLIDER)
+	var b := a.duplicate()
+	assert_vector(b.break_marker).is_equal(a.break_marker)
+	assert_int(b.tier).is_equal(a.tier)

@@ -8,7 +8,12 @@ var _time: float = 0.0
 var _active: bool = false
 
 func throw_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float) -> void:
-	_trajectory = BallTrajectory.create_pitch(pitch_type, target, accuracy)
+	# Ball is a pure VIEW of a trajectory. The legacy _gate1 loop is not the
+	# deterministic path, so it uses a randomized RNG here. Plan 2's AtBatDirector
+	# will pass a seeded RNG derived from PitchCommand.rng_seed instead.
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	_trajectory = BallTrajectory.create_pitch(pitch_type, target, accuracy, rng)
 	position = _trajectory.start_position
 	_time = 0.0
 	_active = true
@@ -33,6 +38,11 @@ func get_current_velocity() -> Vector3:
 	if _trajectory:
 		return _trajectory.get_velocity(_time)
 	return Vector3.ZERO
+
+func get_flight_duration() -> float:
+	if _trajectory:
+		return _trajectory.flight_duration
+	return 0.0
 
 func _process(delta: float) -> void:
 	if not _active:

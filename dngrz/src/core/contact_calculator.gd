@@ -1,6 +1,13 @@
 class_name ContactCalculator
 
-# Tuning constants — Gate 1 will revisit these.
+# DEPRECATED (2026-05-25): superseded by ContactResolver, which receives the
+# ball's actual state and applies the corrected spec §4 input precedence. This
+# class measures placement against the ZONE CENTER (not the ball) and derives
+# spray from timing — the exact bugs the redesign fixes. It survives only so the
+# legacy scenes/_gate1.gd loop keeps running; a later plan removes both together.
+# Do NOT build new code on this class.
+
+# Tuning constants — superseded; see ContactResolver.
 const TIMING_WINDOW := 0.1         # seconds — perfect window is +/- this
 const WHIFF_TOTAL_ERROR := 3.0     # normalized total_error (timing+placement) that triggers a whiff
 const PLACEMENT_WINDOW := 0.12     # meters — perfect placement window

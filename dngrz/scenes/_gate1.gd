@@ -74,6 +74,8 @@ func _process(_delta: float) -> void:
 		var t_now := Time.get_ticks_msec() / 1000.0
 		var t_expected := _pitch_start_time + _current_pitch_flight
 		var dt := t_now - t_expected
+		# Drive the growing incoming-ball cue from flight progress (0 → 1).
+		_batting_view.pitch_progress = clampf((t_now - _pitch_start_time) / maxf(_current_pitch_flight, 0.001), 0.0, 1.0)
 		if not _swung:
 			_batting_view.swing_timing = clampf(dt / 0.15, -1.0, 1.0)
 
@@ -101,20 +103,35 @@ func _start_at_bat() -> void:
 	_ball_trail.clear()
 	_ball.reset()
 	_pitcher.start_aiming()
+	# Re-arm the AI pitcher for this at-bat. It disables itself after each throw
+	# (see _on_pitch_executed) so exactly one pitch is thrown per at-bat.
+	_pitcher_ai.enabled = enable_pitcher_ai
 	_phase = Phase.AIMING
 	_pitching_view.visible = not enable_pitcher_ai
 	_batting_view.visible = false
 	_batting_view.swing_locked = false
 	_batting_view.ball_positions_history = PackedVector2Array()
 	_batting_view.swing_timing = 0.0
+	_batting_view.pitch_progress = 0.0
 
 func _on_pitch_executed(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float) -> void:
 	print("Pitch: ", PitchTypes.display_name(pitch_type), " target=", target, " accuracy=", accuracy)
+	# Reset per-pitch swing state so each pitch is judged fresh. Without this, a
+	# pitch arriving after a previous swing reuses the stale swing and
+	# auto-registers a hit in the same direction.
+	_swung = false
+	_swing_timing = 0.0
+	_swing_placement = Vector2.ZERO
+	_ball_trail.clear()
+	# One pitch per at-bat: stop the free-running AI timer from throwing again
+	# until the next at-bat re-arms it in _start_at_bat().
+	_pitcher_ai.enabled = false
 	_ball.throw_pitch(pitch_type, target, accuracy)
 	_pitch_start_time = Time.get_ticks_msec() / 1000.0
-	# Ball.gd doesn't expose flight_duration publicly; estimate ~0.5s for v1.
-	# Post-Gate 1: add ball.get_flight_duration() -> float.
-	_current_pitch_flight = 0.5
+	# Use the ball's real flight time so the swing-timing meter and expected-arrival
+	# line up with when the pitch actually crosses the plate. (Was a hardcoded 0.5s
+	# guess that desynced the timing feedback from reality.)
+	_current_pitch_flight = _ball.get_flight_duration()
 	_batter.start_at_bat(_current_pitch_flight)
 	_phase = Phase.BALL_IN_FLIGHT
 	_pitching_view.visible = false
@@ -148,6 +165,9 @@ func _on_took_pitch() -> void:
 	print("Took the pitch")
 
 func _on_pitch_arrived(plate_position: Vector3) -> void:
+	# The pitch has crossed the plate — clear the incoming-ball cue so it does not
+	# freeze on screen at "perfect" during the result pause.
+	_batting_view.pitch_progress = 0.0
 	_batter.pitch_arrived(plate_position)
 	if _swung:
 		var pitch_speed := 42.0

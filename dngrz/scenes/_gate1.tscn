@@ -13,6 +13,7 @@
 
 [node name="Gate1" type="Node3D"]
 script = ExtResource("1_gate")
+enable_pitcher_ai = true
 
 [node name="Field" parent="." instance=ExtResource("2_field")]
 
@@ -65,5 +66,5 @@ offset_left = 16.0
 offset_top = 700.0
 offset_right = 1140.0
 offset_bottom = 720.0
-text = "PITCH: Q=FB W=CB E=SL R=CH | WASD=aim | SPACE=throw      BAT: arrows=cursor | ENTER=swing      (set enable_pitcher_ai / enable_batter_ai on Gate1 inspector)"
+text = "PITCH: 1=FB 2=CB 3=SL 4=CH | WASD=aim | SPACE=throw      BAT: arrows=cursor | ENTER=swing      (set enable_pitcher_ai / enable_batter_ai on Gate1 inspector)"
 horizontal_alignment = 1

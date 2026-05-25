@@ -21,6 +21,10 @@ class_name BattingView extends Control
 	set(v):
 		swing_locked = v
 		queue_redraw()
+@export var pitch_progress: float = 0.0:  # 0 = just released, 1 = at the plate
+	set(v):
+		pitch_progress = v
+		queue_redraw()
 
 const ZONE_SIZE := Vector2(340, 440)
 const TIMING_LABELS := ["EARLY", "EARLY+", "PERFECT", "LATE+", "LATE"]
@@ -34,8 +38,9 @@ func _draw() -> void:
 	var zone_left := center_x - ZONE_SIZE.x / 2.0
 	var zone_rect := Rect2(zone_left, zone_top, ZONE_SIZE.x, ZONE_SIZE.y)
 
-	# Zone backdrop + dashed grid (3×3)
-	draw_rect(zone_rect, Colors.BG_BASE, true)
+	# Zone backdrop + dashed grid (3×3). Translucent so the 3D field and ball
+	# show through the overlay instead of being hidden behind a solid panel.
+	draw_rect(zone_rect, Color(Colors.BG_BASE.r, Colors.BG_BASE.g, Colors.BG_BASE.b, 0.45), true)
 	draw_rect(zone_rect, Colors.CHALK, false, 2.0)
 	for i in [1, 2]:
 		var x := zone_left + ZONE_SIZE.x * float(i) / 3.0
@@ -53,6 +58,14 @@ func _draw() -> void:
 	# Predicted landing ring
 	var landing_screen := _zone_to_screen(predicted_landing, zone_rect)
 	draw_arc(landing_screen, 18.0, 0.0, TAU, 32, Colors.HEAT, 2.0)
+
+	# Incoming ball — grows as it nears the plate so the pitch reads as coming
+	# at you. It is full size when it arrives; swing as it fills the ring.
+	if pitch_progress > 0.0 and pitch_progress < 1.0:
+		var incoming := _zone_to_screen(predicted_landing, zone_rect)
+		var r := lerpf(4.0, 24.0, pitch_progress)
+		draw_circle(incoming, r, Color(Colors.CHALK.r, Colors.CHALK.g, Colors.CHALK.b, 0.95))
+		draw_arc(incoming, r + 2.0, 0.0, TAU, 24, Colors.BRAND, 2.0)
 
 	# Aim cursor
 	var aim_screen := _zone_to_screen(aim_position, zone_rect)
