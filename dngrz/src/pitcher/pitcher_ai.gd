@@ -10,30 +10,8 @@ class Decision:
 		target = t
 		accuracy = a
 
-@export var pitcher_controller: NodePath
-@export var auto_pitch_interval: float = 2.5
-@export var enabled: bool = false
-
-var _time_since_last := 0.0
-var _history: Array = []
-
-func _process(delta: float) -> void:
-	if not enabled: return
-	_time_since_last += delta
-	if _time_since_last >= auto_pitch_interval:
-		_time_since_last = 0.0
-		_throw()
-
-func _throw() -> void:
-	if pitcher_controller.is_empty(): return
-	var ctrl := get_node_or_null(pitcher_controller)
-	if ctrl == null: return
-	var d := decide(0, 0, _history)
-	ctrl.request_pitch(d.pitch_type, d.target, d.accuracy)
-	_history.append(d.pitch_type)
-	if _history.size() > 5: _history.pop_front()
-
 # Pure decision function — testable without scene tree.
+# The director calls decide() then request_pitch() exactly once per at-bat.
 func decide(balls: int, strikes: int, history: Array) -> Decision:
 	var pitch_type := _select_pitch_type(balls, strikes, history)
 	var target := _select_target(balls, strikes, pitch_type)

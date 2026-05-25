@@ -3,7 +3,7 @@ extends Node3D
 # Pitch type select (1/2/3/4) is handled one-shot in _unhandled_input; aim
 # (WASD) is polled continuously in _process. No keys are shared between them.
 
-signal pitch_executed(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float)
+signal pitch_committed(cmd: PitchCommand)
 
 var _selected_pitch: PitchTypes.Type = PitchTypes.Type.FASTBALL
 var _target: Vector3 = FieldConstants.STRIKE_ZONE_CENTER
@@ -34,10 +34,12 @@ func stop_aiming() -> void:
 	if _target_marker != null:
 		_target_marker.visible = false
 
-# Programmatic pitch request — used by AI (Task 10a) to drive the controller
-# without input events. Emits the same signal as a player throw.
+func _build_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float) -> PitchCommand:
+	return PitchCommand.new(pitch_type, target, 1.0, accuracy, Vector2.ZERO, PitchTypes.Tier.BASIC, 0, 0)
+
+# Programmatic pitch (AI). The director stamps rng_seed + start_tick on receipt.
 func request_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float = 1.0) -> void:
-	pitch_executed.emit(pitch_type, target, accuracy)
+	pitch_committed.emit(_build_pitch(pitch_type, target, accuracy))
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_aiming:
@@ -75,8 +77,8 @@ func _process(delta: float) -> void:
 			_target_marker.position = _target
 
 func _execute_pitch() -> void:
-	var pitch_data := PitchTypes.get_pitch(_selected_pitch)
-	pitch_executed.emit(_selected_pitch, _target, pitch_data.accuracy)
+	var pdata := PitchTypes.get_pitch(_selected_pitch)
+	pitch_committed.emit(_build_pitch(_selected_pitch, _target, pdata.accuracy))
 	_is_aiming = false
 	if _target_marker != null:
 		_target_marker.visible = false

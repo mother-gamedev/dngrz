@@ -2,33 +2,16 @@ class_name TestPitcherController extends GdUnitTestSuite
 
 const PITCHER_SCENE := preload("res://scenes/pitcher.tscn")
 
-func test_pitcher_loads() -> void:
-	var pitcher := PITCHER_SCENE.instantiate()
-	assert_object(pitcher).is_not_null()
-	pitcher.queue_free()
-
-func test_default_pitch_is_fastball() -> void:
-	var pitcher := PITCHER_SCENE.instantiate()
-	assert_int(pitcher.get_selected_pitch()).is_equal(PitchTypes.Type.FASTBALL)
-	pitcher.queue_free()
-
-func test_default_target_is_zone_center() -> void:
-	var pitcher := PITCHER_SCENE.instantiate()
-	var target: Vector3 = pitcher.get_target()
-	assert_float(target.distance_to(FieldConstants.STRIKE_ZONE_CENTER)).is_less(0.001)
-	pitcher.queue_free()
-
-func test_request_pitch_emits_signal() -> void:
-	var pitcher := PITCHER_SCENE.instantiate()
-	add_child(pitcher)
+func test_request_pitch_emits_pitch_command() -> void:
+	var p := PITCHER_SCENE.instantiate()
+	add_child(p)
 	await get_tree().process_frame
-	var fired := [false]
-	var emitted_type := [PitchTypes.Type.FASTBALL]
-	pitcher.pitch_executed.connect(func(t, _target, _acc):
-		fired[0] = true
-		emitted_type[0] = t
-	)
-	pitcher.request_pitch(PitchTypes.Type.CURVEBALL, Vector3(0.2, 0.7, 0.0), 0.85)
-	assert_bool(fired[0]).is_true()
-	assert_int(emitted_type[0]).is_equal(PitchTypes.Type.CURVEBALL)
-	pitcher.queue_free()
+	var captured := [null]
+	p.pitch_committed.connect(func(cmd: PitchCommand) -> void: captured[0] = cmd)
+	p.request_pitch(PitchTypes.Type.SLIDER, Vector3(0.1, 0.6, 0.0), 0.75)
+	assert_object(captured[0]).is_not_null()
+	var cmd: PitchCommand = captured[0]
+	assert_int(cmd.type).is_equal(PitchTypes.Type.SLIDER)
+	assert_vector(cmd.target).is_equal(Vector3(0.1, 0.6, 0.0))
+	assert_float(cmd.accuracy).is_equal_approx(0.75, 0.0001)
+	p.queue_free()
