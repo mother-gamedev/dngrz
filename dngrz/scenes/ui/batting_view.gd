@@ -9,9 +9,13 @@ class_name BattingView extends Control
 	set(v):
 		ball_positions_history = v
 		queue_redraw()
-@export var predicted_landing: Vector2 = Vector2.ZERO:
+@export var predicted_landing: Vector2 = Vector2.ZERO:  # OBSERVABLE predicted crossing (drifts with break) — never the true target
 	set(v):
 		predicted_landing = v
+		queue_redraw()
+@export var break_marker: Vector2 = Vector2.ZERO:
+	set(v):
+		break_marker = v
 		queue_redraw()
 @export var swing_timing: float = 0.0:  # -1..1, where 0 = perfect
 	set(v):
@@ -58,6 +62,17 @@ func _draw() -> void:
 	# Predicted landing ring
 	var landing_screen := _zone_to_screen(predicted_landing, zone_rect)
 	draw_arc(landing_screen, 18.0, 0.0, TAU, 32, Colors.HEAT, 2.0)
+
+	# Break-direction chevron — the honest in-flight read cue (spec §8). Drawn at
+	# the predicted-landing anchor, pointing in the pitch's break direction.
+	if break_marker.length() > 0.01:
+		var anchor := _zone_to_screen(predicted_landing, zone_rect)
+		var dir := Vector2(break_marker.x, -break_marker.y).normalized()  # +y = up in zone space
+		var tip := anchor + dir * 26.0
+		var wing := dir.rotated(2.5) * 12.0
+		var wing2 := dir.rotated(-2.5) * 12.0
+		draw_line(tip, tip + wing, Colors.HEAT, 3.0)
+		draw_line(tip, tip + wing2, Colors.HEAT, 3.0)
 
 	# Incoming ball — grows as it nears the plate so the pitch reads as coming
 	# at you. It is full size when it arrives; swing as it fills the ring.
