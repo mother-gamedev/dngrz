@@ -72,4 +72,7 @@ func _make_command(swing_type: SwingCommand.SwingType) -> SwingCommand:
 func _update_marker() -> void:
 	if _cursor_marker == null:
 		return
-	_cursor_marker.position = Vector3(_cursor.x, FieldConstants.STRIKE_ZONE_CENTER.y + _cursor.y, 0.0)
+	# Place at the WORLD strike-zone plane, not batter-local: the marker is a child
+	# of the batter (offset (0.5,0,0.3)), so a local position would inherit that
+	# offset and drift right of / inside the batter instead of over the plate.
+	_cursor_marker.global_position = FieldConstants.STRIKE_ZONE_CENTER + Vector3(_cursor.x, _cursor.y, 0.0)

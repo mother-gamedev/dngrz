@@ -165,7 +165,8 @@ func _present() -> void:
 			hist.append(_view.observable_landing)
 			_batting_view.ball_positions_history = hist
 			if _batter != null:
-				_batting_view.aim_position = _batter.cursor()
+				# cursor() is ±CURSOR_RANGE (0.5); the overlay expects ±1 normalized.
+				_batting_view.aim_position = _batter.cursor() * 2.0
 	if _phase == Phase.IDLE:
 		_view.ball_state = null
 		if _ball != null and _ball.has_method("reset"):
