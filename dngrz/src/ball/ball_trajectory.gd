@@ -27,7 +27,7 @@ func get_position(time: float) -> Vector3:
 func get_velocity(time: float) -> Vector3:
 	return initial_velocity + GRAVITY * time
 
-static func create_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float) -> BallTrajectory:
+static func create_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float, rng: RandomNumberGenerator) -> BallTrajectory:
 	var traj := BallTrajectory.new()
 	traj.is_pitch = true
 
@@ -47,11 +47,13 @@ static func create_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy:
 	# Apply break as spin deviation (not baked into initial velocity)
 	traj.spin_break = Vector3(pitch_data.h_break, -pitch_data.drop, 0.0)
 
-	# Accuracy adds random deviation to where the pitch lands
+	# Accuracy adds deviation to where the pitch lands. The RNG is passed in
+	# explicitly (determinism contract #5) so the same seed reproduces the same
+	# pitch — no global randf in any resolution-relevant path.
 	var inaccuracy := (1.0 - accuracy) * 0.15
 	traj.spin_break += Vector3(
-		randf_range(-inaccuracy, inaccuracy),
-		randf_range(-inaccuracy, inaccuracy),
+		rng.randf_range(-inaccuracy, inaccuracy),
+		rng.randf_range(-inaccuracy, inaccuracy),
 		0.0
 	)
 
