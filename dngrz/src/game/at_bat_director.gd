@@ -143,5 +143,23 @@ func _present() -> void:
 		_view.observable_landing = StrikeZone.get_plate_position(bs.position)
 		if _ball != null:
 			_ball.position = bs.position
+		# --- Bridge: push observable data into HUD view nodes ---
+		if _batting_view != null:
+			_batting_view.predicted_landing = _view.observable_landing
+			_batting_view.break_marker = _view.break_marker
+			_batting_view.pitch_progress = clampf(
+				float(_tick - _pitch.start_tick) / maxf(float(_crossing_tick - _pitch.start_tick), 1.0),
+				0.0, 1.0)
+			var hist := _batting_view.ball_positions_history
+			hist.append(_view.observable_landing)
+			_batting_view.ball_positions_history = hist
+			if _batter != null:
+				_batting_view.aim_position = _batter.cursor()
 	if _phase == Phase.IDLE:
 		_view.ball_state = null
+		# --- Bridge: reset HUD view nodes on IDLE ---
+		if _batting_view != null:
+			_batting_view.predicted_landing = Vector2.ZERO
+			_batting_view.break_marker = Vector2.ZERO
+			_batting_view.pitch_progress = 0.0
+			_batting_view.ball_positions_history = PackedVector2Array()
