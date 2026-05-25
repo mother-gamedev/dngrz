@@ -25,6 +25,29 @@ var _result_until_tick: int = 0
 var _last_outcome: AtBatOutcome = null
 var _rng := RandomNumberGenerator.new()
 
+@onready var _ball: Node3D = get_node_or_null("Ball")
+@onready var _pitcher: Node = get_node_or_null("Pitcher")
+@onready var _batter: BatterController = get_node_or_null("Batter")
+@onready var _pitcher_ai: PitcherAI = get_node_or_null("Pitcher/PitcherAI")
+@onready var _batter_ai: BatterAI = get_node_or_null("Batter/BatterAI")
+@onready var _batting_view: BattingView = get_node_or_null("HUDLayer/BattingView")
+@onready var _pitching_view: PitchingView = get_node_or_null("HUDLayer/PitchingView")
+
+var _view := AtBatView.new()
+var _batter_input := BatterInput.new()
+var _ai_rng := RandomNumberGenerator.new()
+var _ai_swing_done: bool = false
+
+func _ready() -> void:
+	assert(Engine.physics_ticks_per_second == SimClock.TICK_RATE)
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_rng.randomize()
+	if _pitcher != null and _pitcher.has_signal("pitch_committed"):
+		_pitcher.pitch_committed.connect(_on_pitch_committed)
+
+func get_view_state() -> AtBatView:
+	return _view
+
 # --- Test/inspection seams ---
 func current_phase() -> Phase: return _phase
 func current_tick() -> int: return _tick
@@ -51,7 +74,7 @@ func step_tick() -> void:
 	_tick += 1
 	match _phase:
 		Phase.IDLE:
-			pass  # waiting for a pitch (Task 14 triggers AI / listens for human)
+			_step_idle()
 		Phase.PITCH_IN_FLIGHT:
 			_collect_swing()
 			if _tick >= _crossing_tick:
@@ -59,7 +82,8 @@ func step_tick() -> void:
 		Phase.RESULT:
 			if _tick >= _result_until_tick:
 				_phase = Phase.IDLE
-	_present()  # Task 14 fills this in; no-op here
+				_pitch = null
+	_present()
 
 func _resolve() -> void:
 	var swing := _swing
@@ -72,8 +96,52 @@ func _resolve() -> void:
 	_phase = Phase.RESULT
 	_result_until_tick = _tick + RESULT_TICKS
 
-# Hooks filled by Task 14; null-guarded no-ops here so the core tests run headless.
-func _collect_swing() -> void: pass
-func _arm_batter() -> void: pass
-func _resolve_defense(_outcome: AtBatOutcome) -> void: pass
-func _present() -> void: pass
+func _step_idle() -> void:
+	# Deliver one AI pitch per at-bat; the human delivers via input → pitch_committed.
+	if enable_pitcher_ai and _pitch == null and _pitcher_ai != null:
+		var d := _pitcher_ai.decide(0, 0, [])
+		begin_at_bat(PitchCommand.new(d.pitch_type, d.target, 1.0, d.accuracy, Vector2.ZERO, PitchTypes.Tier.BASIC, 0, 0))
+
+func _on_pitch_committed(cmd: PitchCommand) -> void:
+	if _phase == Phase.IDLE:
+		begin_at_bat(cmd)
+
+func _arm_batter() -> void:
+	_ai_swing_done = false
+	_ai_rng.seed = _pitch.rng_seed + 1
+	if _batter != null:
+		_batter.arm(_crossing_tick)
+
+func _collect_swing() -> void:
+	if _swing != null:
+		return
+	if enable_batter_ai:
+		if not _ai_swing_done and _batter_ai != null:
+			var observable := _flight.state_at_tick(_crossing_tick)
+			var cmd: SwingCommand = _batter_ai.compute_command(observable, _crossing_tick, 0, 0, _ai_rng)
+			_ai_swing_done = true
+			if cmd != null:
+				_swing = cmd  # latch; resolve uses commit_tick for timing
+	elif _batter != null:
+		var emitted: SwingCommand = _batter.step(_batter_input.sample(_batter.cursor()), _tick)
+		if emitted != null:
+			_swing = emitted
+
+func _resolve_defense(outcome: AtBatOutcome) -> void:
+	_view.last_play = BattedBallResolver.resolve(outcome.batted_trajectory, FieldAlignment.default())
+	if _ball != null and _ball.has_method("launch_batted"):
+		_ball.launch_batted(FieldConstants.HOME_PLATE + Vector3(0, 1, 0),
+			outcome.contact.exit_velocity, outcome.contact.launch_angle, outcome.contact.h_angle)
+
+func _present() -> void:
+	_view.phase = _phase
+	if _phase == Phase.PITCH_IN_FLIGHT and _flight != null:
+		var bs := _flight.state_at_tick(_tick)
+		_view.prev_ball_state = _view.ball_state
+		_view.ball_state = bs
+		_view.break_marker = PitchTypes.get_pitch(_pitch.type).break_marker
+		_view.observable_landing = StrikeZone.get_plate_position(bs.position)
+		if _ball != null:
+			_ball.position = bs.position
+	if _phase == Phase.IDLE:
+		_view.ball_state = null
