@@ -1,0 +1,6 @@
+# Tooling caches (never commit)
+.serena/
+.superpowers/
+
+# Stray local project copy (not part of the tracked Godot project)
+dngrz-(4.5)/
