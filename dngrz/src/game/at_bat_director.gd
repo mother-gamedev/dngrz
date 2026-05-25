@@ -132,6 +132,8 @@ func _collect_swing() -> void:
 				_swing = cmd  # latch; resolve uses commit_tick for timing
 	elif _batter != null:
 		var emitted: SwingCommand = _batter.step(_batter_input.sample(_batter.cursor()), _tick)
+		if _tick % 20 == 0:
+			print("[stick] d0LX=", Input.get_joy_axis(0, JOY_AXIS_LEFT_X), " d1LX=", Input.get_joy_axis(1, JOY_AXIS_LEFT_X), " d1LY=", Input.get_joy_axis(1, JOY_AXIS_LEFT_Y), " cursor=", _batter.cursor())
 		if emitted != null:
 			_swing = emitted
 
