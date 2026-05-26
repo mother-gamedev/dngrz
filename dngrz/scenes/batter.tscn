@@ -43,5 +43,6 @@ mesh = SubResource("CapsuleMesh_bat")
 material_override = SubResource("StandardMaterial3D_bat")
 
 [node name="CursorMarker" type="MeshInstance3D" parent="."]
+visible = false
 mesh = SubResource("SphereMesh_cursor")
 material_override = SubResource("StandardMaterial3D_cursor")
