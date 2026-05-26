@@ -96,9 +96,11 @@ func _draw() -> void:
 		draw_line(tip, tip + wing, Colors.HEAT, 3.0)
 		draw_line(tip, tip + wing2, Colors.HEAT, 3.0)
 
-	# The incoming pitch is read from the 3D ball now (not a 2D duplicate); the
-	# predicted-landing ring above marks WHERE it will cross. There is no aim
-	# cursor — timing, not placement, is the skill (spec §3).
+	# Player cursor (the bat) + its catch radius (the reach gate).
+	var cursor_screen := _zone_to_screen(cursor, zone_rect)
+	var reach_px := ContactResolver.BASE_REACH * (zone_rect.size.x * 0.5)
+	draw_arc(cursor_screen, reach_px, 0.0, TAU, 40, Color(Colors.COOL.r, Colors.COOL.g, Colors.COOL.b, 0.5), 1.5)
+	draw_circle(cursor_screen, 7.0, Colors.COOL)
 
 	# Timing meter (the hero) + the locked verdict beneath it.
 	var meter_y := zone_top + ZONE_SIZE.y + 32.0
@@ -141,6 +143,9 @@ func _draw_verdict(center_x: float, y: float) -> void:
 		ContactResolver.Judgment.EARLY:
 			word = "EARLY"
 			word_color = Colors.BRAND
+		ContactResolver.Judgment.REACH:
+			word = "MISSED"
+			word_color = Colors.HEAT
 		_:
 			word = "LATE"
 			word_color = Colors.BRAND
