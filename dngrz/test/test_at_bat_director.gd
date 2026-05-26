@@ -116,3 +116,8 @@ func test_swing_timing_reaches_late_after_crossing() -> void:
 			max_timing = maxf(max_timing, v.swing_timing)
 		guard += 1
 	assert_float(max_timing).is_greater(0.0)  # swept past PERFECT into the LATE half
+
+func test_late_flight_ticks_tracks_contact_window() -> void:
+	# The flight-extension past the plate must equal the resolver's whiff window, or
+	# late swings get accepted/dropped by a different bound than they're graded by.
+	assert_int(AtBatDirector.LATE_FLIGHT_TICKS).is_equal(ContactResolver.CONTACT_TICKS)

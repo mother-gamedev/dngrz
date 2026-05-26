@@ -14,6 +14,10 @@ class_name BattingView extends Control
 	set(v):
 		predicted_landing = v
 		queue_redraw()
+@export var cursor: Vector2 = Vector2.ZERO:  # normalized plate-space aim (the player's bat); rendered in Task 8
+	set(v):
+		cursor = v
+		queue_redraw()
 @export var break_marker: Vector2 = Vector2.ZERO:
 	set(v):
 		break_marker = v
