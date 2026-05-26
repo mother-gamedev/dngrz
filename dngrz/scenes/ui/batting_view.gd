@@ -1,10 +1,11 @@
 class_name BattingView extends Control
 
-# Timing-first HUD (2026-05-25 redesign, spec §6). The free aim cursor is GONE.
-# The timing meter is the hero: a live needle sweeps EARLY->PERFECT->LATE as the
-# ball nears the plate, LOCKS on commit, and the result flashes a verdict word
-# (timing) plus a contact-quality callout. The predicted-landing ring + break
-# chevron stay as the honest "where" cue; the 3D ball is the "what/when".
+# MSSB-style batting HUD. The player drags a cursor (bat) onto the predicted
+# landing ring; timing gates contact and widens the reach ring toward PERFECT so
+# the timing→reach trade is visible live. On commit the timing needle locks, and
+# the result flashes a verdict word (EARLY/PERFECT/LATE/BALL/STRIKE) plus a
+# contact-quality callout (PERFECT!/SOLID/WEAK/WHIFF). The predicted-landing
+# ring + break chevron give the honest "where" cue; the 3D ball gives "when".
 
 @export var ball_positions_history: PackedVector2Array = PackedVector2Array():
 	set(v):
@@ -14,9 +15,13 @@ class_name BattingView extends Control
 	set(v):
 		predicted_landing = v
 		queue_redraw()
-@export var cursor: Vector2 = Vector2.ZERO:  # normalized plate-space aim (the player's bat); rendered in Task 8
+@export var cursor: Vector2 = Vector2.ZERO:  # normalized plate-space aim (the player's bat)
 	set(v):
 		cursor = v
+		queue_redraw()
+@export var reach_factor: float = 1.0:  # 1.0 baseline; grows toward PERFECT timing (timing→reach trade)
+	set(v):
+		reach_factor = v
 		queue_redraw()
 @export var break_marker: Vector2 = Vector2.ZERO:
 	set(v):
@@ -37,7 +42,11 @@ class_name BattingView extends Control
 # --- Result readout (set by the director once the swing resolves) ---
 @export var show_result: bool = false:  # flash the verdict during the RESULT phase
 	set(v):
+		var was_false := not show_result
 		show_result = v
+		if v and was_false and take_word == "":
+			# Contact result: pop the verdict word larger, scale by quality.
+			_verdict_scale = 1.0 + 0.6 * contact_quality
 		queue_redraw()
 @export var swing_judgment: int = ContactResolver.Judgment.PERFECT:  # timing verdict word
 	set(v):
@@ -51,12 +60,24 @@ class_name BattingView extends Control
 	set(v):
 		is_whiff = v
 		queue_redraw()
+@export var take_word: String = "":  # "BALL"/"STRIKE"/"TAKE" on a take result; "" otherwise
+	set(v):
+		take_word = v
+		queue_redraw()
+
+var _verdict_scale: float = 1.0
 
 const ZONE_SIZE := Vector2(340, 440)
 const TIMING_LABELS := ["EARLY", "EARLY+", "PERFECT", "LATE+", "LATE"]
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(440, 680)
+
+func _process(delta: float) -> void:
+	# Decay verdict scale pop toward 1.0 (presentation-only; never touches the sim).
+	if _verdict_scale > 1.0:
+		_verdict_scale = maxf(1.0, _verdict_scale - delta / 0.15)
+		queue_redraw()
 
 func _draw() -> void:
 	var center_x := size.x / 2.0
@@ -102,8 +123,8 @@ func _draw() -> void:
 	var zc := zone_rect.get_center()
 	var half := zone_rect.size * 0.5
 	var cursor_screen := zc + Vector2(cursor.x, -cursor.y) * half
-	var rx := ContactResolver.BASE_REACH * half.x
-	var ry := ContactResolver.BASE_REACH * half.y
+	var rx := ContactResolver.BASE_REACH * reach_factor * half.x
+	var ry := ContactResolver.BASE_REACH * reach_factor * half.y
 	var ring := PackedVector2Array()
 	for i in 41:
 		var a := TAU * float(i) / 40.0
@@ -143,6 +164,11 @@ func _draw_timing_meter(center_x: float, y: float) -> void:
 func _draw_verdict(center_x: float, y: float) -> void:
 	if not show_result:
 		return
+	# Take result (no contact): show BALL/STRIKE/TAKE in neutral color and return.
+	if take_word != "":
+		_draw_centered_text(take_word, Vector2(center_x, y), Colors.TEXT, 30)
+		return
+	# Contact result: verdict word pops via _verdict_scale (quality-driven pop).
 	var word := ""
 	var word_color: Color
 	match swing_judgment:
@@ -158,7 +184,7 @@ func _draw_verdict(center_x: float, y: float) -> void:
 		_:
 			word = "LATE"
 			word_color = Colors.BRAND
-	_draw_centered_text(word, Vector2(center_x, y), word_color, 30)
+	_draw_centered_text(word, Vector2(center_x, y), word_color, int(30.0 * _verdict_scale))
 	_draw_centered_text(_contact_callout(), Vector2(center_x, y + 34.0), _callout_color(), 20)
 
 func _contact_callout() -> String:
