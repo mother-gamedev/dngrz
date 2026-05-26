@@ -159,15 +159,39 @@ func _present() -> void:
 		_view.prev_ball_state = _view.ball_state
 		_view.ball_state = bs
 		_view.break_marker = PitchTypes.get_pitch(_pitch.type).break_marker
-		_view.observable_landing = StrikeZone.get_plate_position(bs.position)
-		# Timing needle: a live "press now" guide that sweeps from EARLY toward
-		# PERFECT (0) as the ball nears the plate, then LOCKS to the committed
-		# swing. Same tick math ContactResolver judges by, mapped over the whiff
-		# window so the bar edges == auto-whiff (commit_tick - crossing_tick).
-		var ref_tick: int = _swing.commit_tick if _swing != null else _tick
-		_view.swing_timing = clampf(
-			float(ref_tick - _crossing_tick) / float(ContactResolver.CONTACT_TICKS),
-			-1.0, 1.0)
+		# Honest landing projection: propagate the observable ball's current
+		# pos+velocity (including gravity) to the plate plane z=0. This is NOT the
+		# clairvoyant truth-crossing; it is what the batter can infer from the ball.
+		var land := bs.position
+		if absf(bs.velocity.z) > 0.0001:
+			var tt := -bs.position.z / bs.velocity.z
+			if tt < 0.0:
+				tt = 0.0
+			land = Vector3(
+				bs.position.x + bs.velocity.x * tt,
+				bs.position.y + bs.velocity.y * tt + 0.5 * BallTrajectory.GRAVITY.y * tt * tt,
+				0.0)
+		_view.observable_landing = StrikeZone.get_plate_position(land)
+		# Timing needle: LOCKED when a swing is committed (uses exact offset so
+		# existing tests remain valid); LIVE when no swing (sweeps the full flight
+		# so the needle is meaningful from release, not just the last ~12 ticks).
+		if _swing != null:
+			# Locked: precise judged offset — same math ContactResolver uses.
+			_view.swing_timing = clampf(
+				float(_swing.commit_tick - _crossing_tick) / float(ContactResolver.CONTACT_TICKS),
+				-1.0, 1.0)
+		else:
+			# Live sweep: before the plate → progress-based (-1→0);
+			# after the plate → late-offset-based (0→+1).
+			var pitch_prog := clampf(
+				float(_tick - _pitch.start_tick) / maxf(float(_crossing_tick - _pitch.start_tick), 1.0),
+				0.0, 1.0)
+			if _tick <= _crossing_tick:
+				_view.swing_timing = clampf(pitch_prog - 1.0, -1.0, 0.0)
+			else:
+				_view.swing_timing = clampf(
+					float(_tick - _crossing_tick) / float(LATE_FLIGHT_TICKS),
+					0.0, 1.0)
 		_view.swing_locked = _swing != null
 		if _ball != null:
 			_ball.position = bs.position
@@ -181,21 +205,41 @@ func _present() -> void:
 				0.0, 1.0)
 			var hist := _batting_view.ball_positions_history
 			hist.append(_view.observable_landing)
+			if hist.size() > 4:
+				hist = hist.slice(hist.size() - 4)
 			_batting_view.ball_positions_history = hist
 			_batting_view.swing_timing = _view.swing_timing
 			_batting_view.swing_locked = _view.swing_locked
 			_batting_view.show_result = false  # clear last at-bat's verdict mid-flight
+			_batting_view.take_word = ""
+			# Reach ring factor: "commit-now" timing quality drives the ring width,
+			# giving the batter a live preview of the timing→reach trade.
+			var tq := clampf(1.0 - float(absi(_tick - _crossing_tick)) / float(ContactResolver.GOOD_TICKS), 0.0, 1.0)
+			tq = tq * tq
+			_batting_view.reach_factor = 1.0 + ContactResolver.REACH_TIMING_BONUS * tq
 			if not enable_batter_ai:
 				_batting_view.cursor = _batter_input.current_cursor()
 	if _phase == Phase.RESULT and _batting_view != null:
 		# Flash the locked verdict: timing word (always set) + contact-quality
-		# callout. A take has no swing (contact == null) -> nothing to flash.
+		# callout. A take (no swing → contact == null) shows a take word instead.
 		if _last_outcome != null and _last_outcome.contact != null:
 			_batting_view.show_result = true
+			_batting_view.take_word = ""
 			_batting_view.swing_judgment = _last_outcome.contact.judgment
 			_batting_view.contact_quality = _last_outcome.contact.quality
 			_batting_view.is_whiff = _last_outcome.contact.is_whiff
 			_batting_view.swing_locked = true
+		elif _last_outcome != null and _last_outcome.contact == null:
+			_batting_view.show_result = true
+			var take_str: String
+			match _last_outcome.kind:
+				AtBatOutcome.Kind.TAKE_BALL:
+					take_str = "BALL"
+				AtBatOutcome.Kind.TAKE_STRIKE:
+					take_str = "STRIKE"
+				_:
+					take_str = "TAKE"
+			_batting_view.take_word = take_str
 	if _phase == Phase.IDLE:
 		_view.ball_state = null
 		_view.swing_timing = 0.0
@@ -211,5 +255,7 @@ func _present() -> void:
 			_batting_view.swing_timing = 0.0
 			_batting_view.swing_locked = false
 			_batting_view.show_result = false
+			_batting_view.take_word = ""
+			_batting_view.reach_factor = 1.0
 			_batter_input.reset_cursor()
 			_batting_view.cursor = Vector2.ZERO
