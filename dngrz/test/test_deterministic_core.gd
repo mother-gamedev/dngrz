@@ -12,7 +12,7 @@ func _resolve_once(seed_value: int) -> ContactResolver.ContactResult:
 	var crossing_tick := SimClock.seconds_to_ticks(crossing.time)
 	var ball_at_contact := BallStateAtTick.new(crossing_tick, crossing.position, traj.get_velocity(crossing.time))
 	# A batter who reads it perfectly: cursor on the predicted crossing, on-tick.
-	var plate := Vector2(crossing.position.x, crossing.position.y)
+	var plate := StrikeZone.get_plate_position(crossing.position)
 	var swing := SwingCommand.new(plate, SwingCommand.SwingType.POWER, Vector2(0.2, 0.3), crossing_tick)
 	return ContactResolver.resolve(swing, ball_at_contact)
 
