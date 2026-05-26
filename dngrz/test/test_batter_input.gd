@@ -1,21 +1,19 @@
 class_name TestBatterInput extends GdUnitTestSuite
 
-# Timing-first redesign (2026-05-25): no aim cursor. The left stick is a
-# directional bias latched at commit; map() is left-stick + commit only.
+func test_stick_integrates_cursor_from_previous() -> void:
+	var si := BatterInput.map(Vector2(1.0, 0.0), false, Vector2.ZERO)
+	assert_float(si.cursor.x).is_equal_approx(BatterInput.CURSOR_SPEED, 0.0001)
+	assert_float(si.cursor.y).is_equal_approx(0.0, 0.0001)
 
-func test_placement_is_left_stick() -> void:
-	var s := BatterInput.map(Vector2(-0.8, 0.0), false)
-	assert_vector(s.placement_dir).is_equal(Vector2(-0.8, 0.0))
+func test_deadzone_holds_cursor_still() -> void:
+	var prev := Vector2(0.3, -0.2)
+	var si := BatterInput.map(Vector2(0.1, 0.1), false, prev)  # below DEADZONE
+	assert_vector(si.cursor).is_equal(prev)
 
-func test_deadzone_zeros_small_input() -> void:
-	var s := BatterInput.map(Vector2(0.1, 0.1), false)
-	assert_vector(s.placement_dir).is_equal(Vector2.ZERO)
+func test_cursor_clamped_to_reach_region() -> void:
+	var si := BatterInput.map(Vector2(1.0, 0.0), false, Vector2(BatterInput.CURSOR_CLAMP, 0.0))
+	assert_float(si.cursor.x).is_equal_approx(BatterInput.CURSOR_CLAMP, 0.0001)
 
-func test_commit_passthrough() -> void:
-	var s := BatterInput.map(Vector2.ZERO, true)
-	assert_bool(s.commit_pressed).is_true()
-
-func test_cursor_is_always_neutral() -> void:
-	# The cursor is gone: SwingInput.cursor is vestigial and never driven.
-	var s := BatterInput.map(Vector2(1.0, -1.0), true)
-	assert_vector(s.cursor).is_equal(Vector2.ZERO)
+func test_commit_flag_passthrough() -> void:
+	var si := BatterInput.map(Vector2.ZERO, true, Vector2.ZERO)
+	assert_bool(si.commit_pressed).is_true()
