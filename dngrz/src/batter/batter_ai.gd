@@ -16,11 +16,10 @@ func compute_command(observable: BallStateAtTick, crossing_tick: int, balls: int
 	if not _should_swing(ball_pos, in_zone, balls, strikes, rng):
 		return null
 	var noise := lerpf(0.10, 0.02, skill)
-	var cursor := observable.plate_point() + Vector2(rng.randf_range(-noise, noise), rng.randf_range(-noise, noise))
-	var placement := Vector2(rng.randf_range(-0.6, 0.6), rng.randf_range(-0.3, 0.6))
+	var cursor := StrikeZone.get_plate_position(ball_pos) + Vector2(rng.randf_range(-noise, noise), rng.randf_range(-noise, noise))
 	var swing_type := SwingCommand.SwingType.CONTACT if rng.randf() < 0.7 else SwingCommand.SwingType.POWER
 	var latency := int(round(lerpf(8.0, 3.0, skill)))
-	return SwingCommand.new(cursor, swing_type, placement, crossing_tick - latency)
+	return SwingCommand.new(cursor, swing_type, Vector2.ZERO, crossing_tick - latency)
 
 func _should_swing(ball: Vector3, in_zone: bool, balls: int, strikes: int, rng: RandomNumberGenerator) -> bool:
 	var d := _distance_outside_zone(ball)
