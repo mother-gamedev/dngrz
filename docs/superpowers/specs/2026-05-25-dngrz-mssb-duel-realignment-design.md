@@ -1,15 +1,16 @@
 # DNGRZ — MSSB-Faithful Duel Realignment (Plan 3a)
 
-**Status:** Approved design — rev 2 (2026-05-26, revised after a 2-agent adversarial review)
+**Status:** Approved design — rev 3 (2026-05-26, after two adversarial-review rounds)
 **Supersedes:** the *quality model* of `2026-05-25-dngrz-batting-feel-redesign.md` (timing-as-sole-quality) and **reverses** its decision #1 ("location never gates contact"). The deterministic core, structs, and tick architecture from Plans 1–2 are unchanged.
 **Builds on:** `2026-05-24-dngrz-core-mechanics-redesign.md` (Plan 3 = the decision layer). This is the **pitcher-skill + batting-realignment** slice.
 
-## 0. Rev-2 changes (from red-team)
-A design + a technical agent red-teamed rev 1. Adopted: **bend is a release-time SNAPSHOT, not a continuous mid-flight stream** (preserves the pure `(pitch, swing)` resolver + determinism, and is what makes the duel fair); **the landing indicator is truthful** (perfect information — we lean esports/truth, not party-game deception); **timing keeps a residual effect on quality** (verdict stays honest, gradient preserved); plus the reach-whiff verdict, two-field role config, exit-velo de-duplication, read-time floor, honest spray model, a Phase-A kill-criterion, and a corrected scene-recovery note.
+## 0. Revision history
+- **rev 1:** initial MSSB realignment.
+- **rev 2 (red-team #1):** bend → release-time snapshot (pure resolver + determinism preserved); reach-whiff gate; two-field roles; exit-velo de-dup; read-time floor.
+- **rev 3 (red-team #2):** the rev-2 "truthful indicator" **over-corrected into a slot-machine pitcher** and was rejected. Now: **honest-but-not-prophetic indicator** (current-state projection that drifts + break cue that telegraphs bend shape *and magnitude*) — you read & predict, nothing lies. **Timing TRADES with spatial** (great timing widens effective reach) so it's a genuine second skill axis with an honest verdict. **Batter regains intentional spray + launch-angle** via cursor position (a trade-off, not a pure penalty). Plus: reach-whiff verdict channel, velocity-clamp (not tick-floor) for read-time, mandatory anisotropic-space weighting, `placement_dir` retired as DEAD (not "derived"), pitcher controller is greenfield, max-power-heater anti-dominance, corrected scene/test notes. Determinism core (snapshot bend) re-verified sound.
 
 ## 1. Why this exists
-
-The merged "timing-first" batting was feel-tested only "fine enough." Deep real-code research into our closest comp — **Mario Superstar Baseball**, via the `roeming/mssb-dtk` decompilation (`src/game/game_batter.c` is fully decompiled) — showed our model and MSSB's proven model are **inverses**:
+The merged "timing-first" batting felt only "fine enough." Real-code research into our closest comp — **Mario Superstar Baseball**, via the `roeming/mssb-dtk` decompilation (`src/game/game_batter.c` fully decompiled) — showed our model and MSSB's proven model are **inverses**:
 
 | | Our merged "timing-first" | MSSB (proven) |
 |---|---|---|
@@ -17,114 +18,119 @@ The merged "timing-first" batting was feel-tested only "fine enough." Deep real-
 | Quality axis | timing falloff | **spatial — distance from your cursor** |
 | Cursor | removed | free analog cursor you drag to track the ball |
 
-Crucially, **our earlier free-cursor failure was an MLB-The-Show-Zone implementation, not MSSB.** The Show grades on a tiny PCI with punishing precision. MSSB grades on a **wide (~1.0-unit) bat**, a **smooth quality ramp**, and PERFECT/NICE band widths **lerp-widened by a `contactSize` stat + an easy-mode table**. *"Easy to make contact, hard to make perfect."* That tunable forgiveness is the arcade-casual ↔ esports-depth dial. Full research notes: memory `dngrz-mssb-decomp-research`.
+Crucially, **our earlier free-cursor failure was an MLB-The-Show-Zone implementation, not MSSB.** The Show grades on a tiny PCI with punishing precision. MSSB grades on a **wide (~1.0-unit) bat**, a **smooth quality ramp**, and PERFECT/NICE band widths **lerp-widened by a stat + an easy-mode table**. *"Easy to make contact, hard to make perfect."* That tunable forgiveness is the arcade-casual ↔ esports-depth dial. Full research: memory `dngrz-mssb-decomp-research`.
 
-**Positioning:** we sit on the **esports/truth** side of MSSB. We keep MSSB's *shape* (cursor tracking, charge, movement, slap/charge) but reject its *party-game deception* (a lying straight-line dot). Information is honest; skill is reading + executing fast under real pressure.
+**Positioning:** esports/truth side of MSSB. We keep its *shape* (cursor tracking, charge, movement, slap/charge) and its *mind-game* (read the pitch, predict the break, scheme placement), but reject **dishonest information** (a dot that lies). Information is honest; it is **not clairvoyant** — mastery is reading + predicting + executing fast, like the comps (Smash/Rocket League: knowable systems, hidden *intent*).
 
 ## 2. Pillars (esports invariants)
-
-1. **Perfect information** — the batter can see everything needed *in time*. The landing indicator shows the ball's **true** plate-crossing position throughout flight (no hidden late surprise). The 3D ball may curve late as cosmetic juice, but the graded destination is never hidden.
-2. **Symmetric counterplay** — every tool has an answer. The pitcher's bend = honest placement under time pressure (pull the ball off-center / out of zone); the batter's answer = move the cursor there and time it (or lay off). The batter's tracking = answered by the pitcher's speed (less travel time) + the speed-vs-movement tradeoff.
-3. **Determinism** — integer ticks, seeded RNG, pure `(PitchCommand, SwingCommand)` resolution, truth distinct from observable, replayable. **No mutable in-flight state on the resolution path.**
-4. **Forgiveness is a dial, not a constant** — one `contact`/difficulty parameter serves newcomer (wide bands) and tournament (narrow bands).
+1. **Honest, non-clairvoyant information.** Every cue is truthful: the landing indicator shows where the ball heads *right now* (it drifts as the late break expresses), and the break cue telegraphs the bend's *shape and magnitude* up front. Nothing lies — but nothing prophesies the exact landing either. The skill is reading those honest cues and predicting, before your commit deadline.
+2. **Symmetric counterplay with real risk.** Every tool can be answered, and every answer can be *wrong*. Pitcher's bend = honest but un-prophesied placement; batter's answer = read the cue, predict where it ends up, place the cursor, time it (and they can mis-predict). Batter's tracking = answered by the pitcher's speed (less predict/execute time) + the speed-vs-movement tradeoff + location mixing.
+3. **Determinism.** Integer ticks, seeded RNG, pure `(PitchCommand, SwingCommand)` resolution, truth distinct from observable, replayable. No mutable in-flight state on the resolution path. (Re-verified: snapshot bend keeps this intact.)
+4. **Forgiveness is a dial, not a constant.** One `contact`/difficulty parameter serves newcomer (wide bands/reach) and tournament (narrow).
 
 ## 3. The Batter
-
 ### 3.1 Forgiving cursor (re-introduced, MSSB-tuned)
-- Re-activate `SwingInput.cursor` + `SwingCommand.cursor_point` (currently retained-but-deprecated ZERO vestiges — struct shapes already correct, so this is wiring + comments, not a rewrite). The cursor lives in **normalized plate space** — the space `StrikeZone.get_plate_position` returns: `(0,0)` = zone center, `±1` = zone edges.
-- The **left stick drags the cursor** (integrated per tick at a tunable speed), clamped to a **reach box** slightly larger than the zone. `BatterInput` becomes stateful: it holds `_cursor` and integrates it each tick in `sample()`; the pure mapping becomes `map(left, commit, prev_cursor) -> SwingInput` (signature change — breaks `test_batter_input`, budgeted in §8).
-- The cursor is **frozen at swing-commit** (button-down). `BatterController` latches `cursor_point` alongside the existing `placement` latch (this **breaks** `test_batter_controller`'s `cursor_point == ZERO` assertion — budgeted §8). Freezing makes the commit instant unambiguous and removes twitch-after-commit unfairness.
-- Optional panic recenter (button) snaps the cursor toward center fast (MSSB's 3× auto-center). *Phase C polish.*
+- Re-activate `SwingInput.cursor` + `SwingCommand.cursor_point` (retained-but-deprecated ZERO vestiges — wiring + comments, not a struct rewrite). The cursor lives in **normalized plate space** (`StrikeZone.get_plate_position`: `(0,0)` center, `±1` zone edges).
+- **Left stick drags the cursor** (integrated per tick, tunable speed), clamped to a reach region. `BatterInput` becomes stateful (`_cursor` integrated in `sample()`); pure `map(left, commit, prev_cursor) -> SwingInput` (signature change — breaks `test_batter_input`).
+- **Frozen at swing-commit** (button-down); `BatterController` latches `cursor_point` (breaks `test_batter_controller`'s `cursor_point==ZERO` assertion).
+- **Anisotropy is mandatory, not flavor.** `get_plate_position` normalizes x by half-width (~0.215 m) and y by half-height (~0.3 m) independently, so raw normalized distance is ~1.4× tighter vertically. All distance math (reach gate + quality ramp) uses a **single weighted metric** so the catch zone is a physically coherent shape, and **the input cursor clamp uses that same metric** (so a pinned stick never sits in a corner that auto-whiffs). The weight is a named, tuned knob; using one consistent metric everywhere is required.
+- Optional panic recenter (button), Phase C.
 
-### 3.2 Whiff = TWO gates (timing **and** reach)
-A swing is a whiff if **either**:
-- **Timing gate:** `dt = commit_tick − crossing_tick`; `|dt| > whiff_window`. Tap (CONTACT) wider, hold (POWER) tighter (`POWER_WINDOW_SCALE`). Our determinism-safe analog of MSSB's slap-2-10 / charge-3-9 frame table.
-- **Reach gate:** `dist = |ball_plate − cursor| > REACH_RADIUS` — the bat couldn't get there. This **reverses** the old "location never gates contact" decision; it is intentional (MSSB's `batContactRange`) and `REACH_RADIUS` is generous (widened by the forgiveness dial).
+### 3.2 Whiff = TWO gates (timing **and** reach), with distinct verdicts
+A swing whiffs if **either**:
+- **Timing gate:** `dt = commit_tick − crossing_tick`; `|dt| > whiff_window`. Tap (CONTACT) wider, hold (POWER) tighter. → verdict **EARLY / LATE**.
+- **Reach gate:** weighted `dist(ball_plate, cursor) > effective_reach`. → a **distinct reach verdict (e.g. "MISSED")**. (Reverses the old "location never gates" decision; intentional — MSSB bat reach.)
 
-**Verdicts must distinguish the two whiffs.** Timing whiff → EARLY / LATE. Reach whiff → a distinct word (e.g. **"MISSED"/"REACH"**), so the HUD never flashes "PERFECT" on a swing-and-miss. (Judgment is always set, as today.)
+`ContactResult` gains a **`whiff_reason`** (or `Judgment.REACH`) so the HUD never flashes "PERFECT" on a swing-and-miss. The timing `Judgment` is still always set.
 
-### 3.3 Quality = spatial (primary) × timing (residual)
-Within both gates, at the fixed crossing tick:
-- `ball_plate = StrikeZone.get_plate_position(ball_at_contact.position)` (the **truthful, bent** crossing — see §4.3); `offset = ball_plate − swing.cursor_point`; `dist = offset.length()` (**2D**, lightly horizontal-weighted per MSSB; the weight is a named knob).
-- `spatial_q` = smooth ramp from 1.0 at `dist≈0` to 0 at `REACH_RADIUS`, **bucketed** WEAK→NICE→PERFECT with band widths scaled by the `contact` forgiveness dial. **Primary axis** = the new skill.
-- `timing_q` = the existing quadratic timing falloff (within the whiff window). **Residual multiplier**, not the primary: `quality = spatial_q × (TIMING_FLOOR + (1 − TIMING_FLOOR) × timing_q)`, `TIMING_FLOOR ≈ 0.6`. So perfect tracking with mediocre (but in-window) timing still produces good — not great — contact; nailing both is the apex. This keeps the EARLY/PERFECT/LATE verdict **honest** (it moves the outcome) and preserves the gradient that already feel-tested okay, while making tracking the headline skill. Two independent skill axes = the esports ceiling.
-- Net feel target: *easy to make contact, hard to make perfect.* Both gates forgiving; mastery is putting the cursor where the ball truly ends up **and** timing it.
+### 3.3 Quality = spatial (primary) × timing (interacting, not stacked)
+The two axes **trade** — this is the esports ceiling and MSSB's "perfect contact" feel:
+- **Timing widens effective reach:** `effective_reach = BASE_REACH × (1 + REACH_TIMING_BONUS × timing_q)` (`timing_q` = the existing quadratic timing falloff in-window; `REACH_TIMING_BONUS ≈ 0.5`). Perfect timing *forgives spatial error* (bigger catch zone); sloppy-but-in-window timing shrinks it. So great timing can rescue a slightly mis-placed cursor, and dead-on tracking can rescue slightly-off timing — they interact.
+- **`spatial_q`** = smooth ramp `clamp(1 − dist/effective_reach, 0, 1)`, bucketed WEAK→NICE→PERFECT with band widths scaled by the `contact` forgiveness dial. Primary axis.
+- **Quality** = `spatial_q × (0.85 + 0.15 × timing_q)` — most of timing's value is the *reach interaction* above; this small direct term makes nailing **both** the clear apex without making timing a flat tax. Verdict word is now **honest** (timing materially moves the outcome).
+- **Boundary:** define `dist == effective_reach` as a reach-whiff (not a 0-quality dink) — the binary reach gate and the continuous `spatial_q` agree at the edge.
+- Net feel: *easy to make contact, hard to make perfect*; mastery = predict the landing, place the cursor, **and** time it.
 
-### 3.4 Spray, slap/charge — honest single-stick model
-- The tap/hold FSM (`BatterController`) already maps to MSSB slap/charge — **reused**. Tap = CONTACT (wider gates, less power); hold = POWER (tighter, more power).
-- **Spray is fully emergent and `placement_dir` is retired as an authoritative input** (it becomes a derived/vestigial field, honestly — not a half-driven contradiction). With one stick owning cursor-tracking, spray is derived: horizontal = `TIMING_LEAN` (early→pull, late→oppo, per MSSB's frame-indexed launch table) + the cursor's horizontal position (inside contact → pull); vertical/launch = quality-scaled toward the existing `MISHIT_LAUNCH..FLY_LAUNCH`. **Accepted cost:** the hitter trades explicit spray control for tracking. Explicit spray (a second stick / d-pad) is a deliberately deferred depth lever (§9), revisited only if Phase A proves the hitter is strategically shallow.
+### 3.4 Intentional spray + launch (regained), slap/charge
+- Tap/hold FSM (`BatterController`) = MSSB slap/charge, **reused**. Tap=CONTACT, hold=POWER.
+- **Cursor position is an intentional spray + launch lever** (the batter's restored offensive decision): high cursor → fly, low → ground; inside → pull, outside → oppo; plus the timing lean (early→pull, late→oppo). To *aim*, the batter biases the cursor off the ball's true spot, paying a **small quality cost** — a real risk/reward (scheme placement vs maximize contact), not a pure penalty. This restores grounder-vs-fly and pull-vs-oppo as deliberate choices without a second stick.
+- **`placement_dir` is RETIRED as DEAD** (not "derived"): the resolver stops reading it; `BatterAI` stops authoring it (emits ZERO); the field stays in the struct/serialization as an inert vestige. (Resolves the AI/test contradiction the review found.)
+- Explicit second-stick spray remains a deferred *additional* lever (§9), no longer a missing primitive.
 
-## 4. The Pitcher (MSSB charge + release-time bend)
+## 4. The Pitcher (MSSB charge + release-time bend) — greenfield
+The current `PitcherController` is keyboard WASD aim + immediate throw, **no charge, no analog, no stick-curve**. This section is a **net-new build**, not a modification — so aim and bend can be sequenced to avoid any input-channel conflict by construction.
 
 ### 4.1 Sequence
-Aim target → select type → **charge** (hold to build power; a tight *perfect-release* window; over-hold decays power; during charge the stick sets the **bend** direction/amount) → release (commits power **and** bend as a snapshot). No continuous mid-flight steering — the bend is fixed at release. *(Exact bend-setting UX — held-during-charge vs a one-time post-release nudge — is a Phase-B feel-test detail; the design commitment is "single committed value by release," not the input gesture.)*
+Aim target → lock → select type → **charge** (hold to build power; tight *perfect-release* window; over-hold decays power; the stick sets **bend** direction/amount in this phase) → release (commits power **and** bend as a snapshot). No continuous mid-flight steering. *(Exact bend gesture is a Phase-B feel-test detail; the commitment is "single value by release.")*
 
-### 4.2 Power (activates the inert `PitchCommand.power`)
-- Power → **pitch velocity**: faster pitch reaches the plate sooner ⇒ **less batter read/cursor-travel time** (the crossing tick moves earlier). Feed `power` into `BallTrajectory.create_pitch`'s speed (signature change; ripples to `test_ball_trajectory`/`test_ball_flight`).
-- **Exit-velo ceiling falls out for free — no separate term.** The resolver already scales exit velocity by incoming pitch speed (`PITCH_SPEED_FACTOR`, `contact_resolver.gd:97`). A higher-power pitch is faster, so it already yields a higher exit-velo ceiling when squared up. Adding a second power→exit-velo term would **double-count** — so we don't. (This still delivers the "velocity + exit-velo" intent via one path.)
-- **Read-time floor:** clamp max power's velocity contribution (or floor `crossing_tick − start_tick ≥ MIN_READ_TICKS`) so a max heater is never literally unhittable. `seconds_to_ticks` rounds, so the floor is explicit.
-- Charged/perfect pitches **curve less** (MSSB speed-vs-movement tradeoff): scale max `bend` down with power. This is the primary counterweight keeping fast+bend from dominating.
+### 4.2 Power (activates inert `PitchCommand.power`)
+- Power → **pitch velocity** ⇒ less batter predict/execute time (crossing tick earlier). Feed `power` into `create_pitch`'s speed (signature change; ripples to `test_ball_trajectory`/`test_ball_flight`).
+- **Exit-velo ceiling rides the existing speed term** (`contact_resolver.gd:97`, `PITCH_SPEED_FACTOR`) — a faster pitch already yields a higher exit-velo when squared up. **No separate power→exit-velo term** (would double-count).
+- **Read-time floor = clamp the power→speed mapping BEFORE trajectory construction** (NOT a post-hoc tick floor — flooring the crossing tick would break the z=0 crossing invariant). Guarantees a minimum predict/execute window so max heaters aren't unhittable.
+- **Anti-dominance:** the perfect-release window **tightens as power rises** (max velocity demands max precision; missing it → meatball/ball). With bend now a real read (§4.3), the "charged pitches curve less" tradeoff also has teeth. Together these stop "spam max heaters" from being a dominant line. Verify in balance tuning that fast+bend isn't degenerate.
 
-### 4.3 Release-time bend (activates the inert `PitchCommand.bend`)
-- **Snapshot, committed at release**, stored as `PitchCommand.bend: Vector2` (already present). Applied **analytically** in `BallTrajectory.get_position`, after the existing `spin_break` block:
+### 4.3 Release-time bend (activates inert `PitchCommand.bend`)
+- **Snapshot at release**, stored in `PitchCommand.bend: Vector2`. Applied analytically in `BallTrajectory.get_position` as its **own block** (not inside the `spin_break` guard), after spin_break:
   ```gdscript
   var t_norm := time / flight_duration if flight_duration > 0.0 else 0.0
-  pos += Vector3(bend.x, bend.y, 0.0) * (t_norm * t_norm)   # quadratic; peaks at the plate (cosmetic late curve)
+  pos += Vector3(bend.x, bend.y, 0.0) * (t_norm * t_norm)   # quadratic; late visual break, no z
   ```
-- **No z component ⇒ the crossing tick is byte-identical with/without bend** (`predict_crossing` solves on z, `ball_trajectory.gd:47`). Bend moves only WHERE the ball crosses, never WHEN.
-- **`BallFlight` stays PURE** (no mutable bend, no director mutation). Because bend is in `PitchCommand`, `BallFlight.from_pitch(pitch)` reproduces it; the live observable ball and the `AtBatResolver` rebuild agree on the same bent crossing (no two-source-of-truth). `AtBatResolver.resolve(pitch, swing)` signature is **unchanged**. Replay/netcode stay additive.
-- **Truthful indicator (the fairness mechanism):** the batting HUD's landing indicator shows the **true crossing position** computed from the committed trajectory (incl. bend), available throughout flight — a READ, not a guess. The 3D ball still bends late (the `t²` cosmetic), but the indicator never lies. *Tuning knob:* if playtests show this trivializes location-reading, we can add indicator uncertainty/delay as a difficulty dial — but the default is honest.
+- **No z ⇒ crossing tick byte-identical** with/without bend (`predict_crossing` solves on z). `BallFlight` stays **pure**; both the observable path (director) and the graded path (`AtBatResolver.resolve(pitch, swing)`, signature unchanged) rebuild from the same `PitchCommand` and agree on the same bent crossing. Determinism re-verified sound.
+- **Caveat to document:** `get_velocity` is not differentiated for bend, so the exit-velo speed term uses the un-bent speed. Bend is lateral and contributes negligibly to speed magnitude — accept it and note it (or add the derivative later); do not silently leave it unexplained.
+- **Honest, non-clairvoyant indicator (the fairness mechanism):**
+  - The landing indicator shows the ball's **current-state projected crossing** — i.e. keep `at_bat_director._present`'s existing `observable_landing = get_plate_position(bs.position)` (current ball state), which **genuinely drifts** as the `t²` bend expresses late. Do **NOT** repoint it at `state_at_tick(crossing_tick)` (that would be the rejected clairvoyant dot).
+  - The **break cue telegraphs the bend's shape AND magnitude** up front (extend `PitchTypes.break_marker` / the chevron so a bigger committed `bend` shows a bigger cue). So the batter can *read* how much it will break and *predict* the landing — honest, not hidden — then must place + time before commit.
+  - Optional clarity layer (Phase C tuning): an early confidence cone that tightens over flight.
 
 ### 4.4 PHENOM / star pitches
-Hook only — the `tier` flag exists. Later: forced max bend, deterministic-seeded behaviors, apparent-speed change — all at the same analytic seam, all snapshot-expressible.
+Hook only (`tier` flag exists). Later: forced max bend, seeded deception, apparent-speed change — all snapshot-expressible at the analytic seam.
 
 ## 5. Roles
-Both sides are full MSSB-skill controls. Build **both human paths**; the AI fills the empty seat for solo play. **Role config = two independent per-seat fields** (e.g. `batter_seat ∈ {HUMAN, AI}`, `pitcher_seat ∈ {HUMAN, AI}`) replacing the two booleans — NOT a single human-seat enum, which couldn't express both-AI (attract mode) or the headless pure-FSM test mode. HUD visibility derives from `*_seat == HUMAN`. (Touches `at_bat.tscn` + all 9 `test_at_bat_director` factory calls — budgeted §8.)
-- **AI batter** sets `cursor_point` by tracking the truthful predicted crossing (it already emits a `cursor`, `batter_ai.gd:19` — least-disruptive side).
-- **AI pitcher** authors `power` + a planned `bend` — identical struct to the human path (the snapshot model makes human and AI converge).
+Both sides are full MSSB-skill controls; AI fills the empty seat solo. **Role config = two independent per-seat fields** (`batter_seat`/`pitcher_seat ∈ {HUMAN, AI}`) replacing the two booleans — isomorphic, so it preserves both-AI (attract) and the headless pure-FSM test mode. HUD visibility derives from `*_seat == HUMAN`. (Touches `at_bat.tscn` + the **single** `_director()` test factory helper — not 9 call sites.)
+- **AI batter** sets `cursor_point` from the **same observable** the human sees (the current-state projection, NOT `state_at_tick(crossing_tick)` — else the AI reads truth the human can't and is cheating). It already emits a `cursor`.
+- **AI pitcher** authors `power` + a planned `bend` — identical struct to the human path.
 
 ## 6. Component changes (file-by-file)
-**Reused unchanged:** deterministic tick core, `PitchTypes`, `BallFlight.crossing_tick()` math, **`AtBatResolver`/`AtBatOutcome` (signature + shape)**, the tap/hold FSM structure, `StrikeZone`.
+**Reused unchanged:** deterministic tick core, `PitchTypes` (extend the cue), `BallFlight.crossing_tick()` math, **`AtBatResolver`/`AtBatOutcome` signatures**, the tap/hold FSM structure, `StrikeZone`.
 
 **Changed:**
-- `src/core/contact_resolver.gd` — **rewrite (TDD).** Two whiff gates (timing + reach); quality = `spatial_q × residual_timing`; consumes `swing.cursor_point`; distinct reach-whiff verdict; keep exit-velo (single path), timing-lean spray, launch degradation.
-- `src/data/swing_command.gd` / `swing_input.gd` — un-deprecate `cursor_point`/`cursor`; `placement_dir` demoted to derived/vestigial (documented).
-- `src/data/ball_state_at_tick.gd` — verify it carries the bent plate position the resolver needs (it carries `position`; bend is already in the trajectory, so no new field expected — confirm in TDD).
-- `src/batter/batter_input.gd` — stateful cursor; integrate from left stick, clamp to reach box; `map(left, commit, prev_cursor)`.
-- `src/batter/batter_controller.gd` — latch `cursor_point` at commit; keep FSM + bat anim.
-- `src/batter/batter_ai.gd` — set `cursor_point` from truthful predicted crossing.
-- `src/pitcher/pitcher_controller.gd` — charge build + perfect-release window + over-hold decay; stick sets bend during charge; emit `power`/`bend` at release.
+- `src/core/contact_resolver.gd` — **rewrite (TDD).** Two whiff gates (timing + reach) with a `whiff_reason`/`Judgment.REACH`; quality = `spatial_q × (0.85 + 0.15·timing_q)` with timing-widened `effective_reach`; weighted anisotropic distance; consumes `swing.cursor_point`; cursor-position spray+launch; keep exit-velo (single speed path).
+- `src/data/swing_command.gd` / `swing_input.gd` — un-deprecate `cursor`/`cursor_point`; mark `placement_dir` DEAD (inert vestige).
+- `src/batter/batter_input.gd` — stateful cursor, integrate + clamp (gate metric); `map(left, commit, prev_cursor)`.
+- `src/batter/batter_controller.gd` — latch `cursor_point` at commit.
+- `src/batter/batter_ai.gd` — set `cursor_point` from the human-visible current-state projection; stop authoring `placement_dir` (ZERO).
+- `src/pitcher/pitcher_controller.gd` — **greenfield:** charge build + perfect-release window (tightens with power) + over-hold decay; aim→lock→charge(+stick bend); emit `power`/`bend` at release.
 - `src/pitcher/pitcher_ai.gd` — author `power` + planned `bend`.
-- `src/ball/ball_trajectory.gd` — analytic `bend` term (no z); `create_pitch` takes `power`→speed with the read-time floor.
-- `src/ball/ball_flight.gd` — **stays pure**; only consumes the now-populated `PitchCommand.bend`/`power` via `from_pitch`.
-- `src/game/at_bat_director.gd` — two-field role config + HUD-visibility; charge input; truthful-indicator bridge; re-pin `LATE_FLIGHT_TICKS == ContactResolver.CONTACT_TICKS` if the timing gate is retuned.
-- `scenes/ui/batting_view.gd` — render cursor + reach ring + truthful landing indicator; keep verdict/contact callout.
-- `scenes/ui/pitching_view.gd` — drive `release_charge` from the real charge; show bend direction + perfect-window cue.
-- `scenes/batter.tscn` / `at_bat.tscn` — **scene-recovery correction:** restore `CursorMarker` from `git show 1117c98^:dngrz/scenes/batter.tscn` (NOT `_gate1.gd`, which is a script). The current scene reused those resource slots for the bat capsule mesh — do **not** `git checkout` the old scene (it would delete the bat). Re-add the cursor sphere/material *on top*, raising `load_steps` (~6→~8). (Memory `dngrz-core-mechanics-redesign`'s "8→6" note is inaccurate; corrected here.)
+- `src/ball/ball_trajectory.gd` — analytic `bend` block (no z, own block); `create_pitch` takes clamped `power`→speed; note `get_velocity` ignores bend.
+- `src/ball/ball_flight.gd` — stays pure; consumes populated `PitchCommand.bend`/`power`.
+- `src/game/at_bat_director.gd` — two-field role config + HUD visibility; charge input; **keep** `observable_landing` as the current-state projection (do not repoint to crossing-tick); feed the magnitude-telegraphing cue; reach-verdict bridge; replace the `LATE_FLIGHT_TICKS = 12` literal with `const LATE_FLIGHT_TICKS := ContactResolver.CONTACT_TICKS` so a timing retune can't desync.
+- `scenes/ui/batting_view.gd` — render cursor + reach ring (gate metric) + current-projection indicator; magnitude-scaled break cue; branch `_draw_verdict` on `whiff_reason`.
+- `scenes/ui/pitching_view.gd` — drive `release_charge` from real charge; show bend + perfect-window cue.
+- `scenes/batter.tscn` / `at_bat.tscn` — restore `CursorMarker` by **re-adding the cursor sphere/material/node on top of the current scene** (the current scene's resource slots hold the bat capsule — do **not** `git checkout` the pre-pivot scene, that would delete `BatPivot/BatMesh`). The recoverable reference is `git show 1117c98^:dngrz/scenes/batter.tscn` (the *scene*, not `_gate1.gd`). Set `load_steps` to whatever the final resource count is (don't trust prior "8→6"/"6→8" notes — both were wrong; the current scene is `load_steps=6`).
 
 ## 7. Phasing
-- **Phase A — Batter realignment.** Forgiving cursor + two-gate whiff + spatial×residual-timing quality + forgiveness bands + cursor/reach/indicator HUD. Feel-test vs the existing AI pitcher. *Highest feel-risk; first.*
-  - **Kill-criterion (falsifiable retry of a failed mechanic):** if a median tester whiffs more than a set threshold on swings where the cursor is on the ball, or reports the cursor feels "arbitrary/overloading" as before, the MSSB-cursor thesis is wrong → revert to timing-first, do not rationalize forward. Set the exact threshold at Phase-A start.
-- **Phase B — Pitcher charge + bend.** Charge/perfect-window + power (velocity, read-time floor) + release-time bend + truthful indicator; flip so the human can pitch, AI bats.
-- **Phase C — Roles + polish.** Two-field role config, panic recenter, over-charge decay, PHENOM hooks, tuning.
+- **Phase A — Batter realignment.** Forgiving cursor (anisotropic-correct) + two-gate whiff (with reach verdict) + spatial×timing-trade quality + cursor-position spray/launch + cursor/reach/projection HUD. Feel-test vs the existing AI pitcher.
+  - **Kill-criterion (falsifiable):** if a median tester whiffs above a set threshold on cursor-on-ball swings, or reports the cursor "arbitrary/overloading" as before, the MSSB-cursor thesis is wrong → revert to timing-first, don't rationalize. Threshold set at Phase-A start. (Ensure the indicator + anisotropy are correct first, so the test isn't tripped by a wiring bug.)
+- **Phase B — Pitcher charge + bend.** Greenfield charge/perfect-window (tightens with power) + power (clamped velocity) + release-time bend + magnitude-telegraphing cue; flip so the human pitches, AI bats.
+- **Phase C — Roles + polish.** Two-field roles, panic recenter, over-charge decay, confidence cone, PHENOM hooks, balance tuning (heater/fast+bend, spray trade values).
 
 ## 8. Testing — honest blast radius
-This is **not** a "maintain 176" maintenance pass; the realignment rewrites the locked test corpus. Budget **~30+ tests** rewritten/deleted/added:
-- `test_contact_resolver` (≈18): cases asserting timing-as-quality (`test_poor_timing_reduces_quality`) and `test_location_never_gates_contact` **invert**; the `_swing()` helper must pass real cursors; add reach-gate + forgiveness-band + residual-timing cases.
-- `test_batter_input`: `map` signature change is a **compile break** — all calls updated.
-- `test_batter_controller`: `cursor_point == ZERO` assertion inverts.
+Not a "maintain 176" maintenance pass — the realignment rewrites locked tests. **~22–26 touched**, concentrated in `test_contact_resolver`:
+- `test_contact_resolver` (~14): timing-as-sole-quality + `test_location_never_gates_contact` + placement cases **invert**; `_swing()` helper takes a cursor; add reach-gate, reach-verdict, timing-trade, forgiveness-band cases.
+- `test_batter_input`: `map` signature change = **compile break**; 4 calls updated.
+- `test_batter_controller`: `cursor_point==ZERO` assertion inverts.
 - `test_at_bat_resolver`: cursor wiring + whiff-source cases.
-- `test_at_bat_director` (9): two-field role config in the factory; verdict/indicator bridge.
-- `test_ball_trajectory`/`test_ball_flight`: `create_pitch` power arg + bend term.
-- **TDD the `ContactResolver` rewrite first** (RED→GREEN). Note: green tests prove determinism/math, **not** that the mechanic is *fair or fun* — that's the Phase-A feel-test + kill-criterion, not the suite. Don't conflate.
-- Full gdUnit4 run per `dngrz-gdunit4-workflow` (import warm-up + `--ignoreHeadlessMode`); `_draw` HUD stays headless-untested (`godot-headless-draw-untested`) — eyeball in feel-tests.
+- `test_at_bat_director`: **one** `_director()` factory helper edits for the two-field roles (not 9 call sites).
+- `test_ball_trajectory`/`test_ball_flight`: `create_pitch` power arg + bend block.
+- **TDD the `ContactResolver` rewrite first** (RED→GREEN). Green proves determinism/math, **not** fairness/fun — that's the Phase-A feel-test + kill-criterion. Full gdUnit4 run per `dngrz-gdunit4-workflow`; `_draw` HUD stays headless-untested (`godot-headless-draw-untested`).
 
 ## 9. Out of scope
-PHENOM/star behaviors (hook only), netcode/online, baserunning beyond `PlayOutcome`, dynamic field-shift UI (separate Plan 3 slice), camera/visual polish, **explicit second-stick spray aim** (deferred depth lever), continuous mid-flight steer (rejected for determinism + fairness).
+PHENOM/star behaviors (hook only), netcode/online, baserunning beyond `PlayOutcome`, dynamic field-shift UI (separate Plan 3 slice), camera/visual polish, **explicit second-stick spray** (additional deferred lever), continuous mid-flight steer (rejected), clairvoyant landing dot (rejected).
 
 ## 10. Risks & mitigations
-- **Re-introducing a cursor reopens the failure that caused the pivot.** Mitigation: MSSB forgiveness (wide reach gate, smooth ramp, dial-widened bands, quality-from-cursor, two-gate not precise-grade) + a written **Phase-A kill-criterion** so the retry is falsifiable, not rationalized.
-- **Truthful indicator could trivialize pitch-reading.** Mitigation: it's a tuning knob — add indicator uncertainty/delay if needed; default honest (esports lean).
-- **Pitcher input-chain length** (aim → type → charge → bend). Mitigation: sequential not concurrent; a do-nothing newcomer pitch (no charge, no bend) must still be a serviceable, readable straight pitch — define that floor in Phase B.
-- **Fast + bend compounding** (less read time *and* movement). Mitigation: the charged-pitches-curve-less tradeoff + read-time floor; verify in balance tuning that fast+bend isn't a dominant un-counterable strategy.
-- **Spatial whiff vs existing strike/ball logic + the `LATE_FLIGHT_TICKS`/`CONTACT_TICKS` coupling.** Mitigation: distinct reach verdict; re-pin the constant coupling explicitly in the director.
+- **Re-introducing a cursor reopens the pivot's failure.** Mitigation: MSSB forgiveness (wide reach, smooth ramp, dial-widened bands, anisotropy-correct, two-gate not precise-grade) + the written Phase-A kill-criterion.
+- **Indicator too generous → trivial; too stingy → unfair guess.** Mitigation: current-state projection + magnitude-telegraphing cue is the chosen midpoint; the confidence cone + cue magnitude are the tuning knobs. Re-confirm in feel-test that bend is a *read* (batter can be wrong) but not a *blind guess*.
+- **Max-power-heater dominance.** Mitigation: power-tightened perfect-release window + meaningful bend tradeoff + velocity clamp; verify fast+bend isn't degenerate; check a "camp dead-center and react" batter doesn't beat an anticipating one.
+- **Pitcher input-chain length** (greenfield). Mitigation: sequential not concurrent; a do-nothing newcomer pitch (no charge, no bend) must be a serviceable, readable straight pitch — define that floor in Phase B.
+- **Anisotropic-space inconsistency** reads as "the cursor lies" and could trip the kill-criterion on an artifact. Mitigation: one weighted metric for clamp + reach + quality; verify before the feel-test.
+- **Highest-skill DECISION per side** (the depth check): batter = *predict the break + scheme placement vs maximize contact*; pitcher = *sequence location/speed/break to beat the batter's prediction under the release-precision tax*. If a feel-test shows either side reduces to pure execution with no decision, revisit before Plan 3's later slices.
