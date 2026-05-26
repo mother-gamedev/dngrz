@@ -9,13 +9,12 @@ enum SwingType {
 	POWER,    # hold: contact zone shrinks, more power
 }
 
-var cursor_point: Vector2   # DEPRECATED (2026-05-25 timing-first redesign): the free
-                            #   aim cursor was removed; ContactResolver no longer reads
-                            #   this. Retained in the struct (and serialization) for a
-                            #   possible future opt-in "Zone" mode. Emitters pass ZERO.
+var cursor_point: Vector2   # normalized plate-space aim, latched at commit (StrikeZone
+                            #   space: (0,0)=center, ±1=edge). The MSSB cursor — ContactResolver
+                            #   grades contact quality by its distance to the ball (spec §3).
 var swing_type: SwingType
-var placement_dir: Vector2  # latched directional intent: x = spray (- pull / + oppo),
-                            #   y = trajectory (- ground / + fly); (0,0) = up-the-middle line drive
+var placement_dir: Vector2  # DEAD (Plan 3a): spray/launch now derive from cursor position;
+                            #   retained as an inert vestige for serialization. Emit ZERO.
 var commit_tick: int        # the tick the swing button went DOWN — the timing reference (spec §5 latch rule)
 
 func _init(

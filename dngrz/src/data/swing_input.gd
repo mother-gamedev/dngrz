@@ -3,7 +3,7 @@ class_name SwingInput
 # A per-tick input snapshot consumed by the BatterController swing FSM. Both the
 # human input sampler (BatterInput) and the AI produce this, so the FSM has one
 # code path. Carries no node state.
-var cursor: Vector2          # plate-plane contact cursor position this tick
+var cursor: Vector2          # live per-tick cursor aim (normalized plate space)
 var commit_pressed: bool     # is the swing button held this tick?
 var placement_dir: Vector2   # directional intent to latch at the commit instant
 

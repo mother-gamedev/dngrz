@@ -18,8 +18,8 @@ func test_tap_commits_contact_with_latched_values() -> void:
 	assert_object(cmd).is_not_null()
 	assert_int(cmd.swing_type).is_equal(SwingCommand.SwingType.CONTACT)
 	assert_int(cmd.commit_tick).is_equal(10)
-	assert_vector(cmd.cursor_point).is_equal(Vector2.ZERO)         # cursor removed (timing-first): always neutral
-	assert_vector(cmd.placement_dir).is_equal(Vector2(-1.0, 0.0))  # latched at down
+	assert_vector(cmd.cursor_point).is_equal(Vector2(0.1, 0.8))    # cursor latched at button-down tick
+	assert_vector(cmd.placement_dir).is_equal(Vector2.ZERO)        # placement_dir dead; always ZERO
 
 func test_hold_commits_power() -> void:
 	var c := _ctrl()
@@ -50,3 +50,14 @@ func test_never_pressed_is_taken() -> void:
 	for t in range(1, CROSS + 1):
 		assert_object(c.step(_in(Vector2.ZERO, false), t)).is_null()
 	assert_bool(c.is_taken()).is_true()
+
+func test_latches_cursor_at_commit() -> void:
+	var c := BatterController.new()
+	c.arm(120)
+	# Tick 100: button down with cursor at (0.3, -0.2) -> latched.
+	c.step(SwingInput.new(Vector2(0.3, -0.2), true, Vector2.ZERO), 100)
+	# Tick 103: release (tap) -> emits a CONTACT command carrying the latched cursor.
+	var cmd := c.step(SwingInput.new(Vector2(0.9, 0.9), false, Vector2.ZERO), 103)
+	assert_object(cmd).is_not_null()
+	assert_vector(cmd.cursor_point).is_equal(Vector2(0.3, -0.2))
+	assert_int(cmd.commit_tick).is_equal(100)

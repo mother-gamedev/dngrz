@@ -16,6 +16,7 @@ var _state: State = State.IDLE
 var _crossing_tick: int = 0
 var _commit_tick: int = 0
 var _placement_latched: Vector2 = Vector2.ZERO
+var _cursor_latched: Vector2 = Vector2.ZERO
 
 @onready var _bat_pivot: Node3D = $BatPivot if has_node("BatPivot") else null
 
@@ -46,6 +47,7 @@ func arm(p_crossing_tick: int) -> void:
 	_state = State.AIMING
 	_crossing_tick = p_crossing_tick
 	_placement_latched = Vector2.ZERO
+	_cursor_latched = Vector2.ZERO
 	_reset_bat()
 
 # Advance one tick. Returns a SwingCommand on the commit tick, else null.
@@ -56,6 +58,7 @@ func step(input: SwingInput, tick: int) -> SwingCommand:
 				_state = State.CHARGING
 				_commit_tick = tick
 				_placement_latched = input.placement_dir
+				_cursor_latched = input.cursor
 			elif tick >= _crossing_tick:
 				_state = State.TAKEN
 			return null
@@ -74,8 +77,7 @@ func step(input: SwingInput, tick: int) -> SwingCommand:
 
 func _make_command(swing_type: SwingCommand.SwingType) -> SwingCommand:
 	_play_swing(swing_type)
-	# cursor_point is deprecated/unused (ZERO); timing + placement carry the swing.
-	return SwingCommand.new(Vector2.ZERO, swing_type, _placement_latched, _commit_tick)
+	return SwingCommand.new(_cursor_latched, swing_type, Vector2.ZERO, _commit_tick)
 
 # Snap the bat back to the cocked ready pose (next pitch). No-op headlessly.
 func _reset_bat() -> void:
