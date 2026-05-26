@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://b_batter_001"]
+[gd_scene load_steps=8 format=3 uid="uid://b_batter_001"]
 
 [ext_resource type="Script" path="res://src/batter/batter_controller.gd" id="1_batter"]
 
@@ -16,6 +16,16 @@ height = 0.9
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bat"]
 albedo_color = Color(0.45, 0.28, 0.12, 1)
 
+[sub_resource type="SphereMesh" id="SphereMesh_cursor"]
+radius = 0.05
+height = 0.1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cursor"]
+albedo_color = Color(0.17, 0.82, 1.0, 1)
+emission_enabled = true
+emission = Color(0.17, 0.82, 1.0, 1)
+emission_energy_multiplier = 2.0
+
 [node name="Batter" type="Node3D"]
 script = ExtResource("1_batter")
 
@@ -31,3 +41,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.05, 0.1)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
 mesh = SubResource("CapsuleMesh_bat")
 material_override = SubResource("StandardMaterial3D_bat")
+
+[node name="CursorMarker" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_cursor")
+material_override = SubResource("StandardMaterial3D_cursor")
