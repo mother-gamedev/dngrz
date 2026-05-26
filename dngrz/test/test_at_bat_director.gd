@@ -33,7 +33,7 @@ func test_injected_swing_resolves_to_contact() -> void:
 	# Build a perfect swing from the director's own flight.
 	var flight := BallFlight.from_pitch(d.current_pitch())
 	var ct := flight.crossing_tick()
-	d.set_pending_swing(SwingCommand.new(flight.state_at_tick(ct).plate_point(), SwingCommand.SwingType.CONTACT, Vector2.ZERO, ct))
+	d.set_pending_swing(SwingCommand.new(StrikeZone.get_plate_position(flight.state_at_tick(ct).position), SwingCommand.SwingType.CONTACT, Vector2.ZERO, ct))
 	var guard := 0
 	while d.current_phase() == AtBatDirector.Phase.PITCH_IN_FLIGHT and guard < 1000:
 		d.step_tick()
