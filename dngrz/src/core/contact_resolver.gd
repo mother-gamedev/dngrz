@@ -32,11 +32,11 @@ enum Judgment { EARLY, PERFECT, LATE, REACH }
 
 class ContactResult:
 	var is_whiff: bool
-	var quality: float
-	var exit_velocity: float
-	var launch_angle: float
-	var h_angle: float
-	var judgment: int
+	var quality: float          # 0.0 to 1.0
+	var exit_velocity: float    # m/s
+	var launch_angle: float     # degrees from horizontal
+	var h_angle: float          # degrees (0 = center, - = pull, + = oppo)
+	var judgment: int           # Judgment.{EARLY, PERFECT, LATE, REACH}
 
 	func _init() -> void:
 		is_whiff = true

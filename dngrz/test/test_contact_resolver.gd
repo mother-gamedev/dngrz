@@ -31,6 +31,7 @@ func test_cursor_far_from_ball_whiffs_with_reach_verdict() -> void:
 	assert_int(r.judgment).is_equal(ContactResolver.Judgment.REACH)
 
 func test_cursor_near_ball_contacts() -> void:
+	# 0.5 < effective_reach (BASE_REACH 0.6 widened to 0.9 at perfect timing) -> contact.
 	var r := ContactResolver.resolve(_swing(Vector2(0.5, 0.0)), _ball())
 	assert_bool(r.is_whiff).is_false()
 
