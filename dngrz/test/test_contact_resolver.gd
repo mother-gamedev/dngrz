@@ -55,3 +55,35 @@ func test_resolution_is_deterministic() -> void:
 	assert_float(a.h_angle).is_equal(b.h_angle)
 	assert_float(a.launch_angle).is_equal(b.launch_angle)
 	assert_int(a.judgment).is_equal(b.judgment)
+
+# --- Spatial quality (measured from the cursor) ---
+
+func test_cursor_on_ball_is_high_quality() -> void:
+	var r := ContactResolver.resolve(_swing(Vector2.ZERO), _ball())
+	assert_bool(r.is_whiff).is_false()
+	assert_float(r.quality).is_greater(0.9)
+
+func test_cursor_farther_from_ball_lowers_quality() -> void:
+	var on_ball := ContactResolver.resolve(_swing(Vector2.ZERO), _ball())
+	var off := ContactResolver.resolve(_swing(Vector2(0.4, 0.0)), _ball())
+	assert_bool(off.is_whiff).is_false()
+	assert_float(off.quality).is_less(on_ball.quality)
+
+# --- Timing TRADES with reach: perfect timing widens the catch radius ---
+
+func test_perfect_timing_widens_reach() -> void:
+	# Cursor 0.8 from a center ball. At perfect timing effective_reach is 0.9 (contact);
+	# mistimed-but-in-window (dt=5) it shrinks toward BASE_REACH (0.6) -> a REACH whiff.
+	var perfect := ContactResolver.resolve(_swing(Vector2(0.8, 0.0)), _ball())
+	var mistimed := ContactResolver.resolve(_swing(Vector2(0.8, 0.0), SwingCommand.SwingType.CONTACT, TICK + 5), _ball())
+	assert_bool(perfect.is_whiff).is_false()
+	assert_bool(mistimed.is_whiff).is_true()
+	assert_int(mistimed.judgment).is_equal(ContactResolver.Judgment.REACH)
+
+func test_nailing_both_beats_nailing_one() -> void:
+	# Same cursor offset; perfect timing should grade higher than in-window-but-off timing.
+	var both := ContactResolver.resolve(_swing(Vector2(0.3, 0.0)), _ball())
+	var loose := ContactResolver.resolve(_swing(Vector2(0.3, 0.0), SwingCommand.SwingType.CONTACT, TICK + 4), _ball())
+	assert_bool(both.is_whiff).is_false()
+	assert_bool(loose.is_whiff).is_false()
+	assert_float(both.quality).is_greater(loose.quality)
