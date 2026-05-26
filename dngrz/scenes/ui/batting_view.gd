@@ -96,10 +96,19 @@ func _draw() -> void:
 		draw_line(tip, tip + wing, Colors.HEAT, 3.0)
 		draw_line(tip, tip + wing2, Colors.HEAT, 3.0)
 
-	# Player cursor (the bat) + its catch radius (the reach gate).
-	var cursor_screen := _zone_to_screen(cursor, zone_rect)
-	var reach_px := ContactResolver.BASE_REACH * (zone_rect.size.x * 0.5)
-	draw_arc(cursor_screen, reach_px, 0.0, TAU, 40, Color(Colors.COOL.r, Colors.COOL.g, Colors.COOL.b, 0.5), 1.5)
+	# Player cursor (the bat) + its catch radius. The reach gate is a circle in
+	# NORMALIZED plate space, so on this non-square zone it must render as an ellipse;
+	# map un-clamped so the cursor reads truthfully when chasing just off the plate.
+	var zc := zone_rect.get_center()
+	var half := zone_rect.size * 0.5
+	var cursor_screen := zc + Vector2(cursor.x, -cursor.y) * half
+	var rx := ContactResolver.BASE_REACH * half.x
+	var ry := ContactResolver.BASE_REACH * half.y
+	var ring := PackedVector2Array()
+	for i in 41:
+		var a := TAU * float(i) / 40.0
+		ring.append(cursor_screen + Vector2(cos(a) * rx, sin(a) * ry))
+	draw_polyline(ring, Color(Colors.COOL.r, Colors.COOL.g, Colors.COOL.b, 0.5), 1.5)
 	draw_circle(cursor_screen, 7.0, Colors.COOL)
 
 	# Timing meter (the hero) + the locked verdict beneath it.

@@ -13,7 +13,7 @@ func _resolve_once(seed_value: int) -> ContactResolver.ContactResult:
 	var ball_at_contact := BallStateAtTick.new(crossing_tick, crossing.position, traj.get_velocity(crossing.time))
 	# A batter who reads it perfectly: cursor on the predicted crossing, on-tick.
 	var plate := StrikeZone.get_plate_position(crossing.position)
-	var swing := SwingCommand.new(plate, SwingCommand.SwingType.POWER, Vector2(0.2, 0.3), crossing_tick)
+	var swing := SwingCommand.new(plate, SwingCommand.SwingType.POWER, Vector2.ZERO, crossing_tick)
 	return ContactResolver.resolve(swing, ball_at_contact)
 
 func test_same_seed_same_result() -> void:
