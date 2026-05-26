@@ -35,7 +35,8 @@ script = ExtResource("7_pai")
 script = ExtResource("8_bai")
 
 [node name="Camera" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.258819, 0, -0.258819, 0.9659258, 0, 2.5, 3.0)
+transform = Transform3D(1, 0, 0, 0, 0.9758, 0.2187, 0, -0.2187, 0.9758, 0, 1.45, 2.9)
+fov = 62.0
 
 [node name="HUDLayer" type="CanvasLayer" parent="."]
 
