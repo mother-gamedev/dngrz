@@ -52,7 +52,7 @@ func _ready() -> void:
 	# Scene setup: the director owns actor placement in the world (as _gate1 did).
 	# Without this the batter and pitcher sit at the origin on top of each other.
 	if _batter != null:
-		_batter.position = Vector3(0.5, 0.0, 0.3)
+		_batter.position = Vector3(1.1, 0.0, 0.3)
 	if _pitcher != null:
 		_pitcher.position = FieldConstants.MOUND
 	# Show the HUMAN's overlay only. The batting overlay carries the timing meter
