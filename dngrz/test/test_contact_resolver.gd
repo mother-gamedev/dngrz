@@ -87,3 +87,32 @@ func test_nailing_both_beats_nailing_one() -> void:
 	assert_bool(both.is_whiff).is_false()
 	assert_bool(loose.is_whiff).is_false()
 	assert_float(both.quality).is_greater(loose.quality)
+
+# --- Spray / launch from cursor position (intentional) + timing lean ---
+
+func test_cursor_inside_pulls_outside_goes_oppo() -> void:
+	var pull := ContactResolver.resolve(_swing(Vector2(-0.4, 0.0)), _ball())
+	var oppo := ContactResolver.resolve(_swing(Vector2(0.4, 0.0)), _ball())
+	assert_float(pull.h_angle).is_less(0.0)
+	assert_float(oppo.h_angle).is_greater(0.0)
+
+func test_cursor_low_grounds_high_flies() -> void:
+	var grounder := ContactResolver.resolve(_swing(Vector2(0.0, -0.4)), _ball())
+	var fly := ContactResolver.resolve(_swing(Vector2(0.0, 0.4)), _ball())
+	assert_float(fly.launch_angle).is_greater(grounder.launch_angle)
+
+func test_early_timing_leans_pull() -> void:
+	# Cursor on the ball; early timing adds a pull lean.
+	var early := ContactResolver.resolve(_swing(Vector2.ZERO, SwingCommand.SwingType.CONTACT, TICK - 6), _ball())
+	assert_bool(early.is_whiff).is_false()
+	assert_float(early.h_angle).is_less(0.0)
+
+func test_power_swing_hits_harder_than_contact() -> void:
+	var contact := ContactResolver.resolve(_swing(Vector2.ZERO, SwingCommand.SwingType.CONTACT), _ball())
+	var power := ContactResolver.resolve(_swing(Vector2.ZERO, SwingCommand.SwingType.POWER), _ball())
+	assert_float(power.exit_velocity).is_greater(contact.exit_velocity)
+
+func test_exit_velocity_scales_with_pitch_speed() -> void:
+	var slow := ContactResolver.resolve(_swing(Vector2.ZERO), _ball(Vector3(0.0, 0.8, 0.0), 35.0))
+	var fast := ContactResolver.resolve(_swing(Vector2.ZERO), _ball(Vector3(0.0, 0.8, 0.0), 45.0))
+	assert_float(fast.exit_velocity).is_greater(slow.exit_velocity)
