@@ -16,6 +16,9 @@ var _cursor: Vector2 = Vector2.ZERO
 static func map(left: Vector2, commit: bool, prev_cursor: Vector2) -> SwingInput:
 	var move := left if left.length() >= DEADZONE else Vector2.ZERO
 	var cursor := prev_cursor + move * CURSOR_SPEED
+	# Box clamp = the cursor's ROAM region only. Contact reach (ContactResolver) is
+	# measured cursor-to-BALL, not cursor-to-center, so this box shape is independent
+	# of the catch geometry — keep it a simple per-axis clamp.
 	cursor.x = clampf(cursor.x, -CURSOR_CLAMP, CURSOR_CLAMP)
 	cursor.y = clampf(cursor.y, -CURSOR_CLAMP, CURSOR_CLAMP)
 	return SwingInput.new(cursor, commit, Vector2.ZERO)
@@ -33,7 +36,7 @@ func sample() -> SwingInput:
 func current_cursor() -> Vector2:
 	return _cursor
 
-# Reset the cursor to center between at-bats.
+# Reset the cursor to center between at-bats. Called by AtBatDirector on IDLE.
 func reset_cursor() -> void:
 	_cursor = Vector2.ZERO
 

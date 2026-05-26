@@ -17,3 +17,11 @@ func test_cursor_clamped_to_reach_region() -> void:
 func test_commit_flag_passthrough() -> void:
 	var si := BatterInput.map(Vector2.ZERO, true, Vector2.ZERO)
 	assert_bool(si.commit_pressed).is_true()
+
+func test_cursor_clamped_negative_axis() -> void:
+	var si := BatterInput.map(Vector2(-1.0, 0.0), false, Vector2(-BatterInput.CURSOR_CLAMP, 0.0))
+	assert_float(si.cursor.x).is_equal_approx(-BatterInput.CURSOR_CLAMP, 0.0001)
+
+func test_cursor_clamped_y_axis() -> void:
+	var si := BatterInput.map(Vector2(0.0, 1.0), false, Vector2(0.0, BatterInput.CURSOR_CLAMP))
+	assert_float(si.cursor.y).is_equal_approx(BatterInput.CURSOR_CLAMP, 0.0001)
