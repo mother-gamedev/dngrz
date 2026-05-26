@@ -18,7 +18,7 @@ func test_tap_commits_contact_with_latched_values() -> void:
 	assert_object(cmd).is_not_null()
 	assert_int(cmd.swing_type).is_equal(SwingCommand.SwingType.CONTACT)
 	assert_int(cmd.commit_tick).is_equal(10)
-	assert_vector(cmd.cursor_point).is_equal(Vector2(0.1, 0.8))    # latched at down, not the tick-12 cursor
+	assert_vector(cmd.cursor_point).is_equal(Vector2.ZERO)         # cursor removed (timing-first): always neutral
 	assert_vector(cmd.placement_dir).is_equal(Vector2(-1.0, 0.0))  # latched at down
 
 func test_hold_commits_power() -> void:

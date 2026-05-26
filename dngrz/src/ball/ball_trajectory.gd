@@ -6,7 +6,7 @@ const GRAVITY := Vector3(0.0, -9.81, 0.0)
 # unhittable for a human. This multiplies pitch flight time into a readable swing
 # window while keeping the ball crossing the same target. 1.0 = bare realism;
 # raise to slow pitches further. Tune this during the Gate 1 feel-test.
-const PITCH_TIME_SCALE := 2.5
+const PITCH_TIME_SCALE := 4.0
 
 var start_position: Vector3
 var initial_velocity: Vector3

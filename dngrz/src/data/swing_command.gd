@@ -9,7 +9,10 @@ enum SwingType {
 	POWER,    # hold: contact zone shrinks, more power
 }
 
-var cursor_point: Vector2   # plate-plane (x = horizontal, y = height) cursor at commit
+var cursor_point: Vector2   # DEPRECATED (2026-05-25 timing-first redesign): the free
+                            #   aim cursor was removed; ContactResolver no longer reads
+                            #   this. Retained in the struct (and serialization) for a
+                            #   possible future opt-in "Zone" mode. Emitters pass ZERO.
 var swing_type: SwingType
 var placement_dir: Vector2  # latched directional intent: x = spray (- pull / + oppo),
                             #   y = trajectory (- ground / + fly); (0,0) = up-the-middle line drive

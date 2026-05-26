@@ -1,10 +1,11 @@
 class_name BattingView extends Control
 
-# Properties (orchestrator drives these — see Task 16)
-@export var aim_position: Vector2 = Vector2.ZERO:
-	set(v):
-		aim_position = v
-		queue_redraw()
+# Timing-first HUD (2026-05-25 redesign, spec §6). The free aim cursor is GONE.
+# The timing meter is the hero: a live needle sweeps EARLY->PERFECT->LATE as the
+# ball nears the plate, LOCKS on commit, and the result flashes a verdict word
+# (timing) plus a contact-quality callout. The predicted-landing ring + break
+# chevron stay as the honest "where" cue; the 3D ball is the "what/when".
+
 @export var ball_positions_history: PackedVector2Array = PackedVector2Array():
 	set(v):
 		ball_positions_history = v
@@ -28,6 +29,23 @@ class_name BattingView extends Control
 @export var pitch_progress: float = 0.0:  # 0 = just released, 1 = at the plate
 	set(v):
 		pitch_progress = v
+		queue_redraw()
+# --- Result readout (set by the director once the swing resolves) ---
+@export var show_result: bool = false:  # flash the verdict during the RESULT phase
+	set(v):
+		show_result = v
+		queue_redraw()
+@export var swing_judgment: int = ContactResolver.Judgment.PERFECT:  # timing verdict word
+	set(v):
+		swing_judgment = v
+		queue_redraw()
+@export var contact_quality: float = 0.0:  # 0..1, drives the contact callout
+	set(v):
+		contact_quality = v
+		queue_redraw()
+@export var is_whiff: bool = false:
+	set(v):
+		is_whiff = v
 		queue_redraw()
 
 const ZONE_SIZE := Vector2(340, 440)
@@ -74,21 +92,14 @@ func _draw() -> void:
 		draw_line(tip, tip + wing, Colors.HEAT, 3.0)
 		draw_line(tip, tip + wing2, Colors.HEAT, 3.0)
 
-	# Incoming ball — grows as it nears the plate so the pitch reads as coming
-	# at you. It is full size when it arrives; swing as it fills the ring.
-	if pitch_progress > 0.0 and pitch_progress < 1.0:
-		var incoming := _zone_to_screen(predicted_landing, zone_rect)
-		var r := lerpf(4.0, 24.0, pitch_progress)
-		draw_circle(incoming, r, Color(Colors.CHALK.r, Colors.CHALK.g, Colors.CHALK.b, 0.95))
-		draw_arc(incoming, r + 2.0, 0.0, TAU, 24, Colors.BRAND, 2.0)
+	# The incoming pitch is read from the 3D ball now (not a 2D duplicate); the
+	# predicted-landing ring above marks WHERE it will cross. There is no aim
+	# cursor — timing, not placement, is the skill (spec §3).
 
-	# Aim cursor
-	var aim_screen := _zone_to_screen(aim_position, zone_rect)
-	draw_circle(aim_screen, 8.0, Colors.BRAND)
-	draw_arc(aim_screen, 14.0, 0.0, TAU, 32, Colors.BRAND_HOT, 1.5)
-
-	# Timing meter (below zone)
-	_draw_timing_meter(center_x, zone_top + ZONE_SIZE.y + 32.0)
+	# Timing meter (the hero) + the locked verdict beneath it.
+	var meter_y := zone_top + ZONE_SIZE.y + 32.0
+	_draw_timing_meter(center_x, meter_y)
+	_draw_verdict(center_x, meter_y + 64.0)
 
 func _draw_timing_meter(center_x: float, y: float) -> void:
 	var seg_w := 60.0
@@ -107,10 +118,48 @@ func _draw_timing_meter(center_x: float, y: float) -> void:
 		draw_rect(rect, Colors.BORDER_HI, false, 1.0)
 		_draw_centered_text(TIMING_LABELS[i], Vector2(x + seg_w / 2.0, y + seg_h / 2.0), Colors.TEXT, 10)
 
-	# Needle
+	# Needle — sweeps live, then flashes BRAND when locked to the committed swing.
 	var needle_pos := lerpf(start_x, start_x + total_w, (clampf(swing_timing, -1.0, 1.0) + 1.0) / 2.0)
 	var needle_color := Colors.CHALK if not swing_locked else Colors.BRAND
 	draw_line(Vector2(needle_pos, y - 6), Vector2(needle_pos, y + seg_h + 6), needle_color, 3.0)
+
+# Verdict word (timing) + contact-quality callout — required feedback (spec §6),
+# not polish: Super Mega Baseball was dinged specifically for omitting this.
+func _draw_verdict(center_x: float, y: float) -> void:
+	if not show_result:
+		return
+	var word := ""
+	var word_color: Color
+	match swing_judgment:
+		ContactResolver.Judgment.PERFECT:
+			word = "PERFECT"
+			word_color = Colors.COOL
+		ContactResolver.Judgment.EARLY:
+			word = "EARLY"
+			word_color = Colors.BRAND
+		_:
+			word = "LATE"
+			word_color = Colors.BRAND
+	_draw_centered_text(word, Vector2(center_x, y), word_color, 30)
+	_draw_centered_text(_contact_callout(), Vector2(center_x, y + 34.0), _callout_color(), 20)
+
+func _contact_callout() -> String:
+	if is_whiff:
+		return "WHIFF"
+	if contact_quality >= 0.7:
+		return "PERFECT!"
+	if contact_quality >= 0.4:
+		return "SOLID"
+	return "WEAK"
+
+func _callout_color() -> Color:
+	if is_whiff:
+		return Colors.HEAT
+	if contact_quality >= 0.7:
+		return Colors.COOL
+	if contact_quality >= 0.4:
+		return Colors.BRAND
+	return Colors.TEXT
 
 func _zone_to_screen(zone_pos: Vector2, zone_rect: Rect2) -> Vector2:
 	var clamped := Vector2(clampf(zone_pos.x, -1.0, 1.0), clampf(zone_pos.y, -1.0, 1.0))

@@ -13,13 +13,18 @@ enum Phase { IDLE, PITCH_IN_FLIGHT, RESULT }
 @export var enable_batter_ai: bool = false
 
 const RESULT_TICKS := 120          # ~2s at 60Hz
-const COMMIT_WINDOW_GRACE := 10    # ticks; a future server replaces these bounds
+# How long the ball keeps flying PAST the plate before the at-bat resolves: the
+# LATE half of the timing window (== ContactResolver.CONTACT_TICKS, the auto-whiff
+# bound). The needle sweeps to LATE and late swings still register, instead of
+# freezing at PERFECT.
+const LATE_FLIGHT_TICKS := 12
 
 var _tick: int = 0
 var _phase: Phase = Phase.IDLE
 var _pitch: PitchCommand = null
 var _flight: BallFlight = null
 var _crossing_tick: int = 0
+var _resolve_tick: int = 0
 var _swing: SwingCommand = null
 var _result_until_tick: int = 0
 var _last_outcome: AtBatOutcome = null
@@ -50,8 +55,13 @@ func _ready() -> void:
 		_batter.position = Vector3(0.5, 0.0, 0.3)
 	if _pitcher != null:
 		_pitcher.position = FieldConstants.MOUND
-	print("[at_bat] joypads=", Input.get_connected_joypads(),
-		" name=", (Input.get_joy_name(0) if Input.get_connected_joypads().has(0) else "<none>"))
+	# Show the HUMAN's overlay only. The batting overlay carries the timing meter
+	# + verdict; the pitching overlay carries pitch select + target.
+	# A side run by AI shows nothing (its inputs aren't player-facing).
+	if _batting_view != null:
+		_batting_view.visible = not enable_batter_ai
+	if _pitching_view != null:
+		_pitching_view.visible = not enable_pitcher_ai
 
 func get_view_state() -> AtBatView:
 	return _view
@@ -70,6 +80,7 @@ func begin_at_bat(cmd: PitchCommand) -> void:
 	_pitch = cmd
 	_flight = BallFlight.from_pitch(cmd)
 	_crossing_tick = _flight.crossing_tick()
+	_resolve_tick = _crossing_tick + LATE_FLIGHT_TICKS
 	_swing = null
 	_phase = Phase.PITCH_IN_FLIGHT
 	_arm_batter()
@@ -85,7 +96,7 @@ func step_tick() -> void:
 			_step_idle()
 		Phase.PITCH_IN_FLIGHT:
 			_collect_swing()
-			if _tick >= _crossing_tick:
+			if _tick >= _resolve_tick:
 				_resolve()
 		Phase.RESULT:
 			if _tick >= _result_until_tick:
@@ -96,7 +107,7 @@ func step_tick() -> void:
 func _resolve() -> void:
 	var swing := _swing
 	# Director-level tick-window acceptance check (a server replaces these bounds).
-	if swing != null and (swing.commit_tick < _pitch.start_tick or swing.commit_tick > _crossing_tick + COMMIT_WINDOW_GRACE):
+	if swing != null and (swing.commit_tick < _pitch.start_tick or swing.commit_tick > _crossing_tick + LATE_FLIGHT_TICKS):
 		swing = null
 	_last_outcome = AtBatResolver.resolve(_pitch, swing)
 	if _last_outcome.kind == AtBatOutcome.Kind.CONTACT:
@@ -131,9 +142,7 @@ func _collect_swing() -> void:
 			if cmd != null:
 				_swing = cmd  # latch; resolve uses commit_tick for timing
 	elif _batter != null:
-		var emitted: SwingCommand = _batter.step(_batter_input.sample(_batter.cursor()), _tick)
-		if _tick % 20 == 0:
-			print("[stick] d0LX=", Input.get_joy_axis(0, JOY_AXIS_LEFT_X), " d1LX=", Input.get_joy_axis(1, JOY_AXIS_LEFT_X), " d1LY=", Input.get_joy_axis(1, JOY_AXIS_LEFT_Y), " cursor=", _batter.cursor())
+		var emitted: SwingCommand = _batter.step(_batter_input.sample(), _tick)
 		if emitted != null:
 			_swing = emitted
 
@@ -151,6 +160,15 @@ func _present() -> void:
 		_view.ball_state = bs
 		_view.break_marker = PitchTypes.get_pitch(_pitch.type).break_marker
 		_view.observable_landing = StrikeZone.get_plate_position(bs.position)
+		# Timing needle: a live "press now" guide that sweeps from EARLY toward
+		# PERFECT (0) as the ball nears the plate, then LOCKS to the committed
+		# swing. Same tick math ContactResolver judges by, mapped over the whiff
+		# window so the bar edges == auto-whiff (commit_tick - crossing_tick).
+		var ref_tick: int = _swing.commit_tick if _swing != null else _tick
+		_view.swing_timing = clampf(
+			float(ref_tick - _crossing_tick) / float(ContactResolver.CONTACT_TICKS),
+			-1.0, 1.0)
+		_view.swing_locked = _swing != null
 		if _ball != null:
 			_ball.position = bs.position
 			_ball.visible = true
@@ -164,11 +182,22 @@ func _present() -> void:
 			var hist := _batting_view.ball_positions_history
 			hist.append(_view.observable_landing)
 			_batting_view.ball_positions_history = hist
-			if _batter != null:
-				# cursor() is ±CURSOR_RANGE (0.5); the overlay expects ±1 normalized.
-				_batting_view.aim_position = _batter.cursor() * 2.0
+			_batting_view.swing_timing = _view.swing_timing
+			_batting_view.swing_locked = _view.swing_locked
+			_batting_view.show_result = false  # clear last at-bat's verdict mid-flight
+	if _phase == Phase.RESULT and _batting_view != null:
+		# Flash the locked verdict: timing word (always set) + contact-quality
+		# callout. A take has no swing (contact == null) -> nothing to flash.
+		if _last_outcome != null and _last_outcome.contact != null:
+			_batting_view.show_result = true
+			_batting_view.swing_judgment = _last_outcome.contact.judgment
+			_batting_view.contact_quality = _last_outcome.contact.quality
+			_batting_view.is_whiff = _last_outcome.contact.is_whiff
+			_batting_view.swing_locked = true
 	if _phase == Phase.IDLE:
 		_view.ball_state = null
+		_view.swing_timing = 0.0
+		_view.swing_locked = false
 		if _ball != null and _ball.has_method("reset"):
 			_ball.reset()
 		# --- Bridge: reset HUD view nodes on IDLE ---
@@ -177,3 +206,6 @@ func _present() -> void:
 			_batting_view.break_marker = Vector2.ZERO
 			_batting_view.pitch_progress = 0.0
 			_batting_view.ball_positions_history = PackedVector2Array()
+			_batting_view.swing_timing = 0.0
+			_batting_view.swing_locked = false
+			_batting_view.show_result = false
