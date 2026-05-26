@@ -17,7 +17,7 @@ const RESULT_TICKS := 120          # ~2s at 60Hz
 # LATE half of the timing window (== ContactResolver.CONTACT_TICKS, the auto-whiff
 # bound). The needle sweeps to LATE and late swings still register, instead of
 # freezing at PERFECT.
-const LATE_FLIGHT_TICKS := 12
+const LATE_FLIGHT_TICKS := ContactResolver.CONTACT_TICKS
 
 var _tick: int = 0
 var _phase: Phase = Phase.IDLE
@@ -185,6 +185,7 @@ func _present() -> void:
 			_batting_view.swing_timing = _view.swing_timing
 			_batting_view.swing_locked = _view.swing_locked
 			_batting_view.show_result = false  # clear last at-bat's verdict mid-flight
+			_batting_view.cursor = _batter_input.current_cursor()
 	if _phase == Phase.RESULT and _batting_view != null:
 		# Flash the locked verdict: timing word (always set) + contact-quality
 		# callout. A take has no swing (contact == null) -> nothing to flash.
@@ -209,3 +210,5 @@ func _present() -> void:
 			_batting_view.swing_timing = 0.0
 			_batting_view.swing_locked = false
 			_batting_view.show_result = false
+			_batter_input.reset_cursor()
+			_batting_view.cursor = Vector2.ZERO
