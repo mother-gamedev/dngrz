@@ -185,7 +185,8 @@ func _present() -> void:
 			_batting_view.swing_timing = _view.swing_timing
 			_batting_view.swing_locked = _view.swing_locked
 			_batting_view.show_result = false  # clear last at-bat's verdict mid-flight
-			_batting_view.cursor = _batter_input.current_cursor()
+			if not enable_batter_ai:
+				_batting_view.cursor = _batter_input.current_cursor()
 	if _phase == Phase.RESULT and _batting_view != null:
 		# Flash the locked verdict: timing word (always set) + contact-quality
 		# callout. A take has no swing (contact == null) -> nothing to flash.
