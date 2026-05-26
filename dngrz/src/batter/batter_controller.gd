@@ -1,12 +1,12 @@
 class_name BatterController extends Node3D
 
 # Swing FSM (parent spec §5). Steps on a SwingInput each tick and returns a
-# SwingCommand on the tick it commits (else null). The 2026-05-25 timing-first
-# redesign removed the free aim cursor: only the timing (commit tick) and the
-# directional placement bias are latched at button-DOWN — there is nothing to
-# aim. Tap (<TAP_THRESHOLD_TICKS) = CONTACT, hold = POWER; held through the
-# crossing tick auto-commits POWER. Human input (BatterInput) and the AI feed the
-# same SwingInput — one commit path.
+# SwingCommand on the tick it commits (else null). The MSSB realignment (Plan 3a)
+# latches the cursor position AND timing (commit tick) at button-DOWN — the cursor
+# is frozen at commit and grades contact by its distance to the ball. Tap
+# (<TAP_THRESHOLD_TICKS) = CONTACT, hold = POWER; held through the crossing tick
+# auto-commits POWER. Human input (BatterInput) and the AI feed the same SwingInput
+# — one commit path.
 
 const TAP_THRESHOLD_TICKS := 6  # ~100ms at 60Hz
 
@@ -15,7 +15,6 @@ enum State { IDLE, AIMING, CHARGING, COMMITTED, TAKEN }
 var _state: State = State.IDLE
 var _crossing_tick: int = 0
 var _commit_tick: int = 0
-var _placement_latched: Vector2 = Vector2.ZERO
 var _cursor_latched: Vector2 = Vector2.ZERO
 
 @onready var _bat_pivot: Node3D = $BatPivot if has_node("BatPivot") else null
@@ -46,7 +45,6 @@ func is_taken() -> bool:
 func arm(p_crossing_tick: int) -> void:
 	_state = State.AIMING
 	_crossing_tick = p_crossing_tick
-	_placement_latched = Vector2.ZERO
 	_cursor_latched = Vector2.ZERO
 	_reset_bat()
 
@@ -57,7 +55,6 @@ func step(input: SwingInput, tick: int) -> SwingCommand:
 			if input.commit_pressed:
 				_state = State.CHARGING
 				_commit_tick = tick
-				_placement_latched = input.placement_dir
 				_cursor_latched = input.cursor
 			elif tick >= _crossing_tick:
 				_state = State.TAKEN

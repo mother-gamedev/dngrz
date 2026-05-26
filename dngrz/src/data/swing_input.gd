@@ -5,7 +5,7 @@ class_name SwingInput
 # code path. Carries no node state.
 var cursor: Vector2          # live per-tick cursor aim (normalized plate space)
 var commit_pressed: bool     # is the swing button held this tick?
-var placement_dir: Vector2   # directional intent to latch at the commit instant
+var placement_dir: Vector2   # DEAD (Plan 3a): retained for serialization compat; pass ZERO
 
 func _init(p_cursor: Vector2 = Vector2.ZERO, p_commit: bool = false, p_placement: Vector2 = Vector2.ZERO) -> void:
 	cursor = p_cursor
