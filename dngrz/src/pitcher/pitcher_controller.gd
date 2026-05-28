@@ -150,10 +150,20 @@ func _physics_process(_delta: float) -> void:
 		State.CHARGING:
 			_held_ticks += 1
 			# The same stick now means BEND (sequenced after aim — no channel conflict).
-			_bend_stick = _stick()
+			_bend_stick = _pov_to_world(_stick())
+
+# The mound camera (set up by AtBatDirector when the human pitches) looks down
+# world +Z, which makes its screen-right correspond to world -X — a true mirror
+# of the batter cam. So the player's PITCHER-VIEW input space (+x = pitcher's
+# right) is world -X. We flip here at the input boundary; the rest of the
+# controller stays in world coords, and the director's HUD bridge re-flips for
+# display so the HUD cursor, the bend arrow, and the 3D ball all agree with the
+# stick direction. (Tests for the pure bend_from_stick still use world coords.)
+static func _pov_to_world(v: Vector2) -> Vector2:
+	return Vector2(-v.x, v.y)
 
 func _aim() -> void:
-	var move := _stick() + _keys()
+	var move := _pov_to_world(_stick() + _keys())
 	if move.length() > 0.0:
 		_target.x = clampf(_target.x + move.x * AIM_SPEED / float(SimClock.TICK_RATE), -AIM_X_LIMIT, AIM_X_LIMIT)
 		_target.y = clampf(_target.y + move.y * AIM_SPEED / float(SimClock.TICK_RATE), AIM_Y_MIN, AIM_Y_MAX)
