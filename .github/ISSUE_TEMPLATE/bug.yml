@@ -1,0 +1,43 @@
+name: Bug
+description: Something is broken or behaving unexpectedly.
+title: "[bug] "
+labels: ["kind:bug"]
+body:
+  - type: textarea
+    id: repro
+    attributes:
+      label: Repro steps
+      description: What did you do? Be specific — controls, sequence, scene, seed if known.
+      placeholder: |
+        1. Run at_bat.tscn as human-bats / AI-pitches
+        2. Swing on a center-zone fastball with cursor at (0.0, 0.0)
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+    validations:
+      required: true
+  - type: dropdown
+    id: suite
+    attributes:
+      label: Full gdUnit4 suite GREEN locally?
+      options:
+        - "Yes — bug is in code paths the suite doesn't cover"
+        - "No — failing test(s) listed below"
+        - "Haven't run the suite"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / scene / seed / failing test
+      description: Optional — anything helpful. For determinism bugs, the `PitchCommand.rng_seed` if you have it. Suspected file/spec section.

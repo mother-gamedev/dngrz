@@ -1,0 +1,23 @@
+name: Polish / QoL
+description: A small smoothing item — readability nit, minor UX, cleanup.
+title: "[polish] "
+labels: ["kind:polish", "priority:P3"]
+body:
+  - type: textarea
+    id: rough
+    attributes:
+      label: What's rough?
+    validations:
+      required: true
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested smoothing
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      options:
+        - "P3 — someday / nice to have (default)"
+        - "P2 — soon, this phase"
+        - "P1 — next, this week"

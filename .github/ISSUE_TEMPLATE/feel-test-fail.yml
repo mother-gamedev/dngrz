@@ -1,0 +1,29 @@
+name: Feel-test FAIL
+description: A FAIL signal from a plan's feel-test gate. Captures what felt wrong + suspected retune.
+title: "[feel] "
+labels: ["kind:feel-test-fix"]
+body:
+  - type: input
+    id: plan
+    attributes:
+      label: Which plan / gate?
+      placeholder: e.g. docs/superpowers/plans/2026-05-26-dngrz-mssb-pitcher-phase-b.md (Task 11)
+    validations:
+      required: true
+  - type: textarea
+    id: fail-signal
+    attributes:
+      label: Which FAIL signal triggered?
+      description: Quote the plan's FAIL bullet, then describe what you actually felt.
+    validations:
+      required: true
+  - type: textarea
+    id: suspected-knob
+    attributes:
+      label: Suspected knob (constant + file)
+      placeholder: e.g. `PitcherController.MAX_POWER_SPEED_SCALE` in `dngrz/src/ball/ball_trajectory.gd`
+  - type: textarea
+    id: proposed-retune
+    attributes:
+      label: Proposed retune direction
+      description: Direction + rough magnitude. e.g. "lower MAX_POWER_SPEED_SCALE from 1.2 to ~1.1; re-feel-test for top-heater readability."
