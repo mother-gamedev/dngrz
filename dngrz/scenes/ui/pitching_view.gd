@@ -16,6 +16,10 @@ class_name PitchingView extends Control
 	set(v):
 		release_charge = v
 		queue_redraw()
+@export var bend: Vector2 = Vector2.ZERO:  # plate-plane metres; live release-time bend
+	set(v):
+		bend = v
+		queue_redraw()
 
 const ZONE_SIZE := Vector2(280, 360)
 const SELECTOR_LABELS := ["FB", "CB", "SL", "CH"]
@@ -66,6 +70,12 @@ func _draw() -> void:
 	var accuracy_ring_radius := 24.0 / clampf(accuracy, 0.05, 1.0)
 	draw_arc(cursor_pos, accuracy_ring_radius, 0.0, TAU, 32, Colors.BRAND_HOT, 1.5)
 	draw_circle(cursor_pos, 8.0, Colors.BRAND)
+	# Bend arrow: where the late break will pull the ball (plate convention: +y up,
+	# so negate y for screen). Scaled by BEND_MAX so a full-stick bend reads clearly.
+	if bend.length() > 0.001:
+		var bend_screen := Vector2(bend.x, -bend.y) / PitcherController.BEND_MAX * (ZONE_SIZE * 0.4)
+		draw_line(cursor_pos, cursor_pos + bend_screen, Colors.BRAND_HOT, 2.0)
+		draw_circle(cursor_pos + bend_screen, 4.0, Colors.BRAND_HOT)
 
 	# Release meter
 	var meter_y := zone_top + ZONE_SIZE.y + 24.0
@@ -76,6 +86,10 @@ func _draw() -> void:
 	draw_rect(Rect2(meter_x, meter_y, meter_w, meter_h), Colors.BORDER_HI, false, 1.0)
 	var fill_h := meter_h * clampf(release_charge, 0.0, 1.0)
 	draw_rect(Rect2(meter_x, meter_y + meter_h - fill_h, meter_w, fill_h), Colors.BRAND, true)
+	# Perfect-release window: the band at the top of the meter where max power + the
+	# accuracy bonus live (spec §4.2). Release inside it, before over-holding.
+	var band_h := meter_h * PitcherController.PERFECT_BAND
+	draw_rect(Rect2(meter_x - 3.0, meter_y, meter_w + 6.0, band_h), Colors.BRAND_HOT, false, 2.0)
 
 func _draw_centered_text(text: String, center: Vector2, color: Color, font_size: int) -> void:
 	var font := get_theme_default_font()
