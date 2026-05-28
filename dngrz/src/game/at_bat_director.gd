@@ -18,6 +18,9 @@ const RESULT_TICKS := 120          # ~2s at 60Hz
 # bound). The needle sweeps to LATE and late swings still register, instead of
 # freezing at PERFECT.
 const LATE_FLIGHT_TICKS := ContactResolver.CONTACT_TICKS
+# Maps committed bend (plate-plane metres) into the normalized break-cue space so the
+# batter's chevron telegraphs bend magnitude honestly. Feel-test tunable.
+const CUE_BEND_GAIN := 2.5
 
 var _tick: int = 0
 var _phase: Phase = Phase.IDLE
@@ -119,7 +122,10 @@ func _step_idle() -> void:
 	# Deliver one AI pitch per at-bat; the human delivers via input → pitch_committed.
 	if enable_pitcher_ai and _pitch == null and _pitcher_ai != null:
 		var d := _pitcher_ai.decide(0, 0, [])
-		begin_at_bat(PitchCommand.new(d.pitch_type, d.target, 1.0, d.accuracy, Vector2.ZERO, PitchTypes.Tier.BASIC, 0, 0))
+		begin_at_bat(PitchCommand.new(d.pitch_type, d.target, d.power, d.accuracy, d.bend, PitchTypes.Tier.BASIC, 0, 0))
+	elif not enable_pitcher_ai and _pitcher != null and _pitcher.has_method("start_aiming") and not _pitcher.is_aiming():
+		# Human pitches: hand control to the pitcher; it emits pitch_committed on release.
+		_pitcher.start_aiming()
 
 func _on_pitch_committed(cmd: PitchCommand) -> void:
 	if _phase == Phase.IDLE:
@@ -158,7 +164,10 @@ func _present() -> void:
 		var bs := _flight.state_at_tick(_tick)
 		_view.prev_ball_state = _view.ball_state
 		_view.ball_state = bs
-		_view.break_marker = PitchTypes.get_pitch(_pitch.type).break_marker
+		# Break cue telegraphs the pitch type's shape AND the committed bend magnitude
+		# (spec §4.3): a bigger bend shows a bigger cue. CUE_BEND_GAIN maps bend metres
+		# to the normalized marker space (Task 7 makes the batting view scale by it).
+		_view.break_marker = PitchTypes.get_pitch(_pitch.type).break_marker + _pitch.bend * CUE_BEND_GAIN
 		# Honest landing projection: propagate the observable ball's current
 		# pos+velocity (including gravity) to the plate plane z=0. This is NOT the
 		# clairvoyant truth-crossing; it is what the batter can infer from the ball.
@@ -259,3 +268,9 @@ func _present() -> void:
 			_batting_view.reach_factor = 1.0
 			_batter_input.reset_cursor()
 			_batting_view.cursor = Vector2.ZERO
+	# --- Bridge: drive the pitching HUD from the live pitcher (human seat only) ---
+	if _pitching_view != null and not enable_pitcher_ai and _pitcher != null and _pitcher.has_method("current_charge"):
+		_pitching_view.selected_pitch = _pitcher.get_selected_pitch()
+		_pitching_view.aim_position = StrikeZone.get_plate_position(_pitcher.get_target())
+		_pitching_view.release_charge = _pitcher.current_charge()
+		_pitching_view.bend = _pitcher.current_bend()
