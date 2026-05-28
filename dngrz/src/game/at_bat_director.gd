@@ -44,6 +44,7 @@ var _rng := RandomNumberGenerator.new()
 @onready var _batter_ai: BatterAI = get_node_or_null("Batter/BatterAI")
 @onready var _batting_view: BattingView = get_node_or_null("HUDLayer/BattingView")
 @onready var _pitching_view: PitchingView = get_node_or_null("HUDLayer/PitchingView")
+@onready var _camera: Camera3D = get_node_or_null("Camera")
 
 var _view := AtBatView.new()
 var _batter_input := BatterInput.new()
@@ -69,6 +70,17 @@ func _ready() -> void:
 		_batting_view.visible = not enable_batter_ai
 	if _pitching_view != null:
 		_pitching_view.visible = not enable_pitcher_ai
+	# Camera POV: the scene's default transform is the feel-tested behind-the-plate
+	# BATTING view. When the human pitches, swing the same camera behind the mound
+	# looking in toward the plate so your own pitch reads correctly (presentation
+	# only; the position/fov are feel-tuned in the Task 11 gate). look_at_from_position
+	# avoids hand-building the basis and keeps "up" stable.
+	if not enable_pitcher_ai and _camera != null:
+		_camera.look_at_from_position(
+			Vector3(0.0, 2.2, FieldConstants.MOUND.z - 2.5),  # behind the mound (more -Z)
+			FieldConstants.STRIKE_ZONE_CENTER,                # look toward the plate (+Z)
+			Vector3.UP)
+		_camera.fov = 55.0
 
 func get_view_state() -> AtBatView:
 	return _view
