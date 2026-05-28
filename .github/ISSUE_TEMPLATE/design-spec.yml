@@ -1,0 +1,28 @@
+name: Design spec needed
+description: A new feature/system that needs a written spec before any plan or code.
+title: "[design] "
+labels: ["kind:design-spec", "status:needs-design"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs designing?
+    validations:
+      required: true
+  - type: textarea
+    id: why-now
+    attributes:
+      label: Why now?
+      description: What's the trigger? What's blocked without it?
+    validations:
+      required: true
+  - type: input
+    id: builds-on
+    attributes:
+      label: Which existing spec does this build on / extend?
+      placeholder: e.g. docs/superpowers/specs/2026-05-25-dngrz-mssb-duel-realignment-design.md §X
+  - type: textarea
+    id: open-questions
+    attributes:
+      label: Known open questions
+      description: Optional — early-stage questions the spec will need to answer.

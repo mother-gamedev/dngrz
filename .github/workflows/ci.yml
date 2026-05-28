@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: gdUnit4 (headless)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GODOT_VERSION: 4.6.3-stable
+      # Canonical Godot release URL. If 4.6.3-stable is ever yanked or the URL
+      # pattern changes, update both this and GODOT_VERSION.
+      GODOT_ZIP_URL: https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Godot binary
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Install Godot ${{ env.GODOT_VERSION }} (cache miss only)
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          wget -q "$GODOT_ZIP_URL" -O godot.zip
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}_linux.x86_64" Godot
+          chmod +x Godot
+          rm godot.zip
+
+      - name: Verify Godot
+        run: ~/godot/Godot --version
+
+      # The import warm-up is REQUIRED for gdUnit4 to see new class_name modules
+      # (per the project workflow memory: dngrz-gdunit4-workflow).
+      - name: Import project (warm class cache)
+        run: timeout 180 ~/godot/Godot --headless --path dngrz --import
+
+      - name: Run gdUnit4 suite (full)
+        run: |
+          set -o pipefail
+          set +e
+          timeout 600 ~/godot/Godot --headless --path dngrz \
+            -s -d --remote-debug tcp://127.0.0.1:0 \
+            res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            --ignoreHeadlessMode --add res://test/ | tee gdunit.log
+          GODOT_EXIT=$?
+          set -e
+          # gdUnit4 v6's exit code is not a clean 0 on success (locally observed
+          # 101 with orphans). The authoritative pass/fail signal is the
+          # "Overall Summary:" line printed at the end. Parse it.
+          if grep -qE "Overall Summary:.*0 errors.*0 failures.*0 flaky" gdunit.log; then
+            echo "::notice::Suite PASSED (Godot exit code was $GODOT_EXIT)"
+          else
+            echo "::error::Suite did not report a clean pass (Godot exit code was $GODOT_EXIT)"
+            grep -E "FAILED|errors|failures|Overall Summary:" gdunit.log || true
+            exit 1
+          fi
+
+      - name: Upload gdUnit4 report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdunit4-report
+          path: dngrz/reports/
+          if-no-files-found: ignore
+          retention-days: 14

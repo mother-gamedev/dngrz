@@ -1,0 +1,8 @@
+# Default owner for the whole repo.
+# Solo today; this file documents the default and future-proofs onboarding.
+# When contributors arrive, add per-scope lines ABOVE this catch-all so the
+# more-specific rule wins, e.g.:
+#   dngrz/src/pitcher/*  @cner-smith @someone-else
+#   dngrz/src/batter/*   @cner-smith @someone-else
+
+* @cner-smith
