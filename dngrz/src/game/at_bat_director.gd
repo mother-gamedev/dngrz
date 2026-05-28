@@ -76,11 +76,14 @@ func _ready() -> void:
 	# only; the position/fov are feel-tuned in the Task 11 gate). look_at_from_position
 	# avoids hand-building the basis and keeps "up" stable.
 	if not enable_pitcher_ai and _camera != null:
+		# Tuned so the pitcher (capsule, h=1.8 at y≈0.254) doesn't fill the foreground:
+		# camera sits ~6m behind + ~4m above the rubber, looks slightly down at the plate.
+		# At fov 60 the pitcher subtends ~25% of vertical view (was filling it before).
 		_camera.look_at_from_position(
-			Vector3(0.0, 2.2, FieldConstants.MOUND.z - 2.5),  # behind the mound (more -Z)
-			FieldConstants.STRIKE_ZONE_CENTER,                # look toward the plate (+Z)
+			Vector3(0.0, 4.0, FieldConstants.MOUND.z - 6.0),  # well behind + above the mound
+			Vector3(0.0, 0.5, 0.0),                           # look at the catcher/plate area
 			Vector3.UP)
-		_camera.fov = 55.0
+		_camera.fov = 60.0
 
 func get_view_state() -> AtBatView:
 	return _view
@@ -292,6 +295,14 @@ func _present() -> void:
 	# --- Bridge: drive the pitching HUD from the live pitcher (human seat only) ---
 	if _pitching_view != null and not enable_pitcher_ai and _pitcher != null and _pitcher.has_method("current_charge"):
 		_pitching_view.selected_pitch = _pitcher.get_selected_pitch()
-		_pitching_view.aim_position = StrikeZone.get_plate_position(_pitcher.get_target())
+		# Pitcher-view conversion: world +X renders at screen-LEFT from the mound cam
+		# (true mirror of the batter cam). The HUD inverts X so its cursor + bend arrow
+		# match the player's stick direction AND the 3D ball position (both screen-right
+		# when the player presses stick-right). World coords are still the truth.
+		# _pitcher is typed Node (duck-typed); call results are Variant, so explicit
+		# type annotations are required for the walrus operator to compile.
+		var aim_world: Vector2 = StrikeZone.get_plate_position(_pitcher.get_target())
+		_pitching_view.aim_position = Vector2(-aim_world.x, aim_world.y)
 		_pitching_view.release_charge = _pitcher.current_charge()
-		_pitching_view.bend = _pitcher.current_bend()
+		var bend_world: Vector2 = _pitcher.current_bend()
+		_pitching_view.bend = Vector2(-bend_world.x, bend_world.y)
