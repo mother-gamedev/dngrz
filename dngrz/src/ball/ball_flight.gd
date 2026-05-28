@@ -15,7 +15,7 @@ func _init(p_trajectory: BallTrajectory, p_start_tick: int) -> void:
 static func from_pitch(pitch: PitchCommand) -> BallFlight:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = pitch.rng_seed
-	var traj := BallTrajectory.create_pitch(pitch.type, pitch.target, pitch.accuracy, rng)
+	var traj := BallTrajectory.create_pitch(pitch.type, pitch.target, pitch.accuracy, rng, pitch.power, pitch.bend)
 	return BallFlight.new(traj, pitch.start_tick)
 
 # The integer tick at which the ball crosses the plate plane (z = 0). Rounded

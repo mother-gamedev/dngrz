@@ -32,3 +32,21 @@ func test_same_seed_is_deterministic() -> void:
 	var sa := a.state_at_tick(a.crossing_tick())
 	var sb := b.state_at_tick(b.crossing_tick())
 	assert_vector(sa.position).is_equal(sb.position)
+
+func _bent_pitch(bend: Vector2, seed_value := 7, start_tick := 100) -> PitchCommand:
+	return PitchCommand.new(PitchTypes.Type.FASTBALL, Vector3(0.0, 0.8, 0.0),
+		1.0, 1.0, bend, PitchTypes.Tier.BASIC, seed_value, start_tick)
+
+func test_bend_keeps_crossing_tick_identical() -> void:
+	# The crossing tick is solved on z; bend has no z, so it must not move (spec §4.3).
+	var straight := BallFlight.from_pitch(_bent_pitch(Vector2.ZERO))
+	var bent := BallFlight.from_pitch(_bent_pitch(Vector2(0.4, -0.2)))
+	assert_int(bent.crossing_tick()).is_equal(straight.crossing_tick())
+
+func test_bend_moves_crossing_position() -> void:
+	var straight := BallFlight.from_pitch(_bent_pitch(Vector2.ZERO))
+	var bent := BallFlight.from_pitch(_bent_pitch(Vector2(0.4, 0.0)))
+	var ct := straight.crossing_tick()
+	var sx := straight.state_at_tick(ct).position.x
+	var bx := bent.state_at_tick(ct).position.x
+	assert_float(bx).is_greater(sx + 0.1)
