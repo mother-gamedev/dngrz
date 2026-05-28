@@ -135,3 +135,16 @@ func test_begin_at_bat_preserves_bend_in_flight() -> void:
 	var straight := BallFlight.from_pitch(_pitch())
 	assert_float(flight.state_at_tick(ct).position.x).is_greater(straight.state_at_tick(ct).position.x + 0.1)
 	assert_int(flight.crossing_tick()).is_equal(straight.crossing_tick())   # tick invariant holds
+
+func test_project_to_plate_lags_the_late_bend() -> void:
+	# At the AI's reaction tick, the honest projection of a bending pitch does NOT
+	# reach the true crossing x (the late t^2 break hasn't expressed) — so bend can
+	# fool the AI batter (spec §5: same observable as the human, not clairvoyant).
+	var p := _pitch()
+	p.bend = Vector2(0.4, 0.0)
+	var flight := BallFlight.from_pitch(p)
+	var ct := flight.crossing_tick()
+	var read_tick := ct - AtBatDirector.AI_REACTION_TICKS
+	var projected := AtBatDirector._project_to_plate(flight.state_at_tick(read_tick))
+	var truth := flight.state_at_tick(ct).position
+	assert_float(absf(projected.x - truth.x)).is_greater(0.02)
