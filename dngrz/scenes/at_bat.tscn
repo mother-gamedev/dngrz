@@ -72,7 +72,7 @@ offset_left = 16.0
 offset_top = 700.0
 offset_right = 1140.0
 offset_bottom = 720.0
-text = "PITCH: 1-4 type | left stick / WASD aim | HOLD A (SPACE) to charge — stick sets bend — release to throw     (AI bats)"
+text = "PITCH: 1-4 / DPAD type | left stick / WASD aim | HOLD A (SPACE) to charge — stick sets bend — release to throw     (AI bats)"
 horizontal_alignment = 1
 
 [node name="Fielders" type="Node3D" parent="."]
