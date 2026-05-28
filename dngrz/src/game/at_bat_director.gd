@@ -21,6 +21,10 @@ const LATE_FLIGHT_TICKS := ContactResolver.CONTACT_TICKS
 # Maps committed bend (plate-plane metres) into the normalized break-cue space so the
 # batter's chevron telegraphs bend magnitude honestly. Feel-test tunable.
 const CUE_BEND_GAIN := 2.5
+# How many ticks before crossing the AI batter commits its read. It reads the same
+# honest current-state projection the human sees AT this tick, so the late bend
+# (which expresses after) can fool it (spec §5).
+const AI_REACTION_TICKS := 8
 
 var _tick: int = 0
 var _phase: Phase = Phase.IDLE
@@ -118,6 +122,18 @@ func _resolve() -> void:
 	_phase = Phase.RESULT
 	_result_until_tick = _tick + RESULT_TICKS
 
+# Honest current-state projection of a ball to the plate plane z=0 (gravity
+# included). This is what the batter can INFER from the ball RIGHT NOW — it drifts
+# as the late t^2 bend expresses and is NOT the clairvoyant truth-crossing.
+static func _project_to_plate(bs: BallStateAtTick) -> Vector3:
+	if absf(bs.velocity.z) <= 0.0001:
+		return bs.position
+	var tt := maxf(0.0, -bs.position.z / bs.velocity.z)
+	return Vector3(
+		bs.position.x + bs.velocity.x * tt,
+		bs.position.y + bs.velocity.y * tt + 0.5 * BallTrajectory.GRAVITY.y * tt * tt,
+		0.0)
+
 func _step_idle() -> void:
 	# Deliver one AI pitch per at-bat; the human delivers via input → pitch_committed.
 	if enable_pitcher_ai and _pitch == null and _pitcher_ai != null:
@@ -141,8 +157,11 @@ func _collect_swing() -> void:
 	if _swing != null:
 		return
 	if enable_batter_ai:
-		if not _ai_swing_done and _batter_ai != null:
-			var observable := _flight.state_at_tick(_crossing_tick)
+		if not _ai_swing_done and _batter_ai != null and _tick >= _crossing_tick - AI_REACTION_TICKS:
+			# Read the honest, drifting projection from the CURRENT ball state — the
+			# same thing the human sees — so the late bend can fool the AI (spec §5).
+			var bs := _flight.state_at_tick(_tick)
+			var observable := BallStateAtTick.new(_tick, _project_to_plate(bs), bs.velocity)
 			var cmd: SwingCommand = _batter_ai.compute_command(observable, _crossing_tick, 0, 0, _ai_rng)
 			_ai_swing_done = true
 			if cmd != null:
@@ -168,19 +187,9 @@ func _present() -> void:
 		# (spec §4.3): a bigger bend shows a bigger cue. CUE_BEND_GAIN maps bend metres
 		# to the normalized marker space (Task 7 makes the batting view scale by it).
 		_view.break_marker = PitchTypes.get_pitch(_pitch.type).break_marker + _pitch.bend * CUE_BEND_GAIN
-		# Honest landing projection: propagate the observable ball's current
-		# pos+velocity (including gravity) to the plate plane z=0. This is NOT the
-		# clairvoyant truth-crossing; it is what the batter can infer from the ball.
-		var land := bs.position
-		if absf(bs.velocity.z) > 0.0001:
-			var tt := -bs.position.z / bs.velocity.z
-			if tt < 0.0:
-				tt = 0.0
-			land = Vector3(
-				bs.position.x + bs.velocity.x * tt,
-				bs.position.y + bs.velocity.y * tt + 0.5 * BallTrajectory.GRAVITY.y * tt * tt,
-				0.0)
-		_view.observable_landing = StrikeZone.get_plate_position(land)
+		# Honest landing projection (the batter's read): current ball state → z=0.
+		# NOT the clairvoyant truth-crossing.
+		_view.observable_landing = StrikeZone.get_plate_position(_project_to_plate(bs))
 		# Timing needle: LOCKED when a swing is committed (uses exact offset so
 		# existing tests remain valid); LIVE when no swing (sweeps the full flight
 		# so the needle is meaningful from release, not just the last ~12 ticks).
