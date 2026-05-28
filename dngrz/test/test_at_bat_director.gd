@@ -121,3 +121,17 @@ func test_late_flight_ticks_tracks_contact_window() -> void:
 	# The flight-extension past the plate must equal the resolver's whiff window, or
 	# late swings get accepted/dropped by a different bound than they're graded by.
 	assert_int(AtBatDirector.LATE_FLIGHT_TICKS).is_equal(ContactResolver.CONTACT_TICKS)
+
+func test_begin_at_bat_preserves_bend_in_flight() -> void:
+	# A bent pitch handed to the director must reach the plate bent (the director
+	# rebuilds the flight from the same PitchCommand the resolver grades).
+	var d := _director()
+	var p := _pitch()
+	p.bend = Vector2(0.35, 0.0)
+	d.begin_at_bat(p)
+	var flight := BallFlight.from_pitch(d.current_pitch())
+	var ct := flight.crossing_tick()
+	# Same seed/target straight pitch for comparison.
+	var straight := BallFlight.from_pitch(_pitch())
+	assert_float(flight.state_at_tick(ct).position.x).is_greater(straight.state_at_tick(ct).position.x + 0.1)
+	assert_int(flight.crossing_tick()).is_equal(straight.crossing_tick())   # tick invariant holds
