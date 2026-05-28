@@ -106,14 +106,17 @@ func _draw() -> void:
 	var landing_screen := _zone_to_screen(predicted_landing, zone_rect)
 	draw_arc(landing_screen, 18.0, 0.0, TAU, 32, Colors.HEAT, 2.0)
 
-	# Break-direction chevron — the honest in-flight read cue (spec §8). Drawn at
-	# the predicted-landing anchor, pointing in the pitch's break direction.
+	# Break cue — the honest in-flight read (spec §4.3/§8): a stem + chevron pointing
+	# in the break direction, whose LENGTH scales with break_marker magnitude so a
+	# bigger committed bend telegraphs a bigger cue. Clamped to stay legible.
 	if break_marker.length() > 0.01:
 		var anchor := _zone_to_screen(predicted_landing, zone_rect)
 		var dir := Vector2(break_marker.x, -break_marker.y).normalized()  # +y = up in zone space
-		var tip := anchor + dir * 26.0
-		var wing := dir.rotated(2.5) * 12.0
-		var wing2 := dir.rotated(-2.5) * 12.0
+		var cue_len := clampf(break_marker.length() * 22.0, 14.0, 48.0)
+		var tip := anchor + dir * cue_len
+		var wing := dir.rotated(2.5) * (cue_len * 0.46)
+		var wing2 := dir.rotated(-2.5) * (cue_len * 0.46)
+		draw_line(anchor, tip, Colors.HEAT, 3.0)
 		draw_line(tip, tip + wing, Colors.HEAT, 3.0)
 		draw_line(tip, tip + wing2, Colors.HEAT, 3.0)
 
