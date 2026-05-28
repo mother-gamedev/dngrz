@@ -54,9 +54,11 @@ static func power_for_charge(charge: float) -> float:
 
 static func accuracy_for_charge(charge: float, base_accuracy: float) -> float:
 	if charge > 1.0:
-		# Over-held: bleed toward a meatball (the precision tax on max power).
+		# Over-held: bleed from the perfect peak (1.0) toward a meatball — NOT from
+		# base_accuracy. Decaying from base would create a 0.20 cliff at charge 1.0+ε
+		# (peak 1.0 → just past peak 0.8 with base 0.8). Now continuous and monotonic.
 		var over := (charge - 1.0) / OVERHOLD_ACC_SPAN
-		return clampf(lerpf(base_accuracy, MEATBALL_ACCURACY, over), MEATBALL_ACCURACY, base_accuracy)
+		return clampf(lerpf(1.0, MEATBALL_ACCURACY, over), MEATBALL_ACCURACY, 1.0)
 	if charge >= 1.0 - PERFECT_BAND:
 		# Perfect-release window: sharpen toward a bullseye.
 		var t := (charge - (1.0 - PERFECT_BAND)) / PERFECT_BAND
@@ -64,7 +66,11 @@ static func accuracy_for_charge(charge: float, base_accuracy: float) -> float:
 	return base_accuracy   # early release keeps the pitch's base accuracy
 
 static func bend_from_stick(stick: Vector2) -> Vector2:
-	return Vector2(clampf(stick.x, -1.0, 1.0), clampf(stick.y, -1.0, 1.0)) * BEND_MAX
+	# RADIAL clamp so |bend| <= BEND_MAX even on diagonals. A per-axis clamp would
+	# let Vector2(1,1) become (0.4, 0.4) with magnitude ~0.566 — 41% over the spec
+	# cap, which would desync the batter's chevron telegraph (Task 7) from physics.
+	var clamped := stick if stick.length() <= 1.0 else stick.normalized()
+	return clamped * BEND_MAX
 
 # Build the committed pitch from a charge level + a bend-stick reading. Pure w.r.t.
 # the node's current selection + aim; used by both the input path and tests. The
