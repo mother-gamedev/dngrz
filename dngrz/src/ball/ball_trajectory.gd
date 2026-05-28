@@ -8,9 +8,19 @@ const GRAVITY := Vector3(0.0, -9.81, 0.0)
 # raise to slow pitches further. Tune this during the Gate 1 feel-test.
 const PITCH_TIME_SCALE := 4.0
 
+# Power maps to flight speed (spec §4.2: power -> velocity -> less batter read time).
+# MIN = a soft, readable newcomer pitch (slower than baseline); MAX = a genuinely
+# faster-than-baseline heater. MAX_POWER_SPEED_SCALE IS the read-time-floor clamp:
+# the mapping is clamped here (power is clamped to 1.0), never as a post-hoc tick
+# floor (which would break the z=0 crossing invariant). Lower MAX if the max heater
+# feels unhittable in the feel-test.
+const MIN_POWER_SPEED_SCALE := 0.7
+const MAX_POWER_SPEED_SCALE := 1.2
+
 var start_position: Vector3
 var initial_velocity: Vector3
 var spin_break: Vector3       # lateral/vertical break from spin (for pitches)
+var bend: Vector2             # release-time steer snapshot (plate-plane metres, NO z); spec §4.3
 var flight_duration: float    # expected time to reach target (pitches) or land (batted)
 var is_pitch: bool
 
@@ -31,8 +41,18 @@ func get_position(time: float) -> Vector3:
 		# Break builds gradually, most apparent in last third of flight
 		var break_factor := t_normalized * t_normalized
 		pos += spin_break * break_factor
+	# Release-time bend (spec §4.3): analytic quadratic, peaks at the plate, NO z so
+	# the crossing tick is byte-identical with or without bend (predict_crossing
+	# solves on z). This is the seam Plan 3's pitcher steer expresses through.
+	if bend.length() > 0.0001:
+		var t_bend := time / flight_duration if flight_duration > 0.0 else 0.0
+		pos += Vector3(bend.x, bend.y, 0.0) * (t_bend * t_bend)
 	return pos
 
+# NOTE (spec §4.3): bend is intentionally NOT differentiated here. Bend is a small
+# lateral/vertical displacement that contributes negligibly to speed magnitude, and
+# the exit-velocity term reads this un-bent speed. Accepted and documented; add the
+# analytic derivative later only if a measurable discrepancy appears.
 func get_velocity(time: float) -> Vector3:
 	return initial_velocity + GRAVITY * time
 
@@ -49,17 +69,20 @@ func predict_crossing(plane_z: float = 0.0) -> CrossingPrediction:
 		t = flight_duration
 	return CrossingPrediction.new(get_position(t), t)
 
-static func create_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float, rng: RandomNumberGenerator) -> BallTrajectory:
+static func create_pitch(pitch_type: PitchTypes.Type, target: Vector3, accuracy: float, rng: RandomNumberGenerator, power: float = 1.0, bend: Vector2 = Vector2.ZERO) -> BallTrajectory:
 	var traj := BallTrajectory.new()
 	traj.is_pitch = true
+	traj.bend = bend
 
 	var pitch_data := PitchTypes.get_pitch(pitch_type)
 	traj.start_position = FieldConstants.MOUND + Vector3(0.0, 1.8, 0.0)  # release point
 
-	# Flight time based on speed and distance, slowed by PITCH_TIME_SCALE so the
-	# swing window is human-readable (bare realism is ~0.44s — unhittable).
+	# Flight time from speed + distance, slowed by PITCH_TIME_SCALE for readability.
+	# power scales the effective speed between MIN (soft/slow/readable) and MAX
+	# (faster-than-baseline heater). The MAX clamp is the read-time floor.
+	var speed_scale := lerpf(MIN_POWER_SPEED_SCALE, MAX_POWER_SPEED_SCALE, clampf(power, 0.0, 1.0))
 	var distance := traj.start_position.distance_to(target)
-	traj.flight_duration = (distance / pitch_data.speed) * PITCH_TIME_SCALE
+	traj.flight_duration = (distance / (pitch_data.speed * speed_scale)) * PITCH_TIME_SCALE
 
 	# Initial velocity to reach target (accounting for gravity).
 	# target = start + v*t + 0.5*g*t^2  =>  v = (target - start - 0.5*g*t^2) / t
