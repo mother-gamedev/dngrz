@@ -28,6 +28,14 @@ func test_overhold_degrades_to_meatball() -> void:
 	assert_float(acc).is_less(0.8)
 	assert_float(acc).is_greater_equal(PitcherController.MEATBALL_ACCURACY)
 
+func test_accuracy_is_continuous_across_peak() -> void:
+	# No accuracy cliff just past the perfect peak: over-hold decays smoothly from
+	# the peak (1.0), not from base_accuracy. The buggy version dropped ~0.20 at
+	# charge = 1.0 + epsilon.
+	var peak := PitcherController.accuracy_for_charge(1.0, 0.8)
+	var just_past := PitcherController.accuracy_for_charge(1.01, 0.8)
+	assert_float(absf(peak - just_past)).is_less(0.02)
+
 func test_newcomer_floor_is_serviceable() -> void:
 	# A do-nothing pitch (no charge) is a slower-but-accurate straight ball (spec §10).
 	assert_float(PitcherController.power_for_charge(0.0)).is_equal_approx(PitcherController.MIN_POWER, 0.0001)
@@ -37,6 +45,14 @@ func test_bend_scales_with_stick() -> void:
 	assert_vector(PitcherController.bend_from_stick(Vector2(1.0, 0.0))).is_equal(Vector2(PitcherController.BEND_MAX, 0.0))
 	assert_vector(PitcherController.bend_from_stick(Vector2.ZERO)).is_equal(Vector2.ZERO)
 	assert_float(PitcherController.bend_from_stick(Vector2(2.0, 0.0)).x).is_equal_approx(PitcherController.BEND_MAX, 0.0001)  # clamped
+
+func test_bend_diagonal_respects_max_magnitude() -> void:
+	# Spec: BEND_MAX caps total bend magnitude (the batter HUD chevron is scaled to
+	# it in Task 7). Per-axis clamping would let diagonals exceed BEND_MAX.
+	var diag := PitcherController.bend_from_stick(Vector2(1.0, 1.0))
+	assert_float(diag.length()).is_less_equal(PitcherController.BEND_MAX + 0.0001)
+	# The radial clamp also preserves direction — diagonal stays diagonal.
+	assert_float(absf(diag.x - diag.y)).is_less(0.0001)
 
 func test_charge_for_ticks_normalizes_to_ramp() -> void:
 	assert_float(PitcherController.charge_for_ticks(PitcherController.CHARGE_TICKS)).is_equal_approx(1.0, 0.0001)
@@ -56,7 +72,10 @@ func test_build_release_command_carries_power_bend_accuracy() -> void:
 	assert_vector(cmd.target).is_equal(Vector3(0.1, 0.6, 0.0))
 	assert_float(cmd.power).is_equal_approx(1.0, 0.0001)
 	assert_vector(cmd.bend).is_equal(Vector2(PitcherController.BEND_MAX, 0.0))
-	assert_float(cmd.accuracy).is_greater(0.0)
+	# Perfect-window charge (1.0) earns the accuracy bonus to a 1.0 bullseye, even
+	# for the SLIDER's base accuracy of 0.75. A `> 0.0` assertion let the cliff bug
+	# (Bug 2 of the post-Task-3 fix pass) slip through.
+	assert_float(cmd.accuracy).is_equal_approx(1.0, 0.0001)
 	p.queue_free()
 
 # --- AI / programmatic path still works (now forwards power+bend) ---
