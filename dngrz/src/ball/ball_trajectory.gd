@@ -15,7 +15,7 @@ const PITCH_TIME_SCALE := 4.0
 # floor (which would break the z=0 crossing invariant). Lower MAX if the max heater
 # feels unhittable in the feel-test.
 const MIN_POWER_SPEED_SCALE := 0.7
-const MAX_POWER_SPEED_SCALE := 1.2
+const MAX_POWER_SPEED_SCALE := 1.4
 
 var start_position: Vector3
 var initial_velocity: Vector3

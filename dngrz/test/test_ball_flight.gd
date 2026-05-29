@@ -23,7 +23,11 @@ func test_state_at_start_tick_is_at_release() -> void:
 func test_state_at_crossing_reaches_plate() -> void:
 	var f := BallFlight.from_pitch(_pitch(7, 100))
 	var s := f.state_at_tick(f.crossing_tick())
-	assert_float(s.position.z).is_equal_approx(0.0, 0.1)
+	# Tolerance covers tick-rounding quantization at max pitch speed: the crossing
+	# TIME is sub-tick-precise but the queried TICK is the nearest integer, so the
+	# ball is up to a half-tick of z-displacement away. At MAX_POWER_SPEED_SCALE=1.4
+	# (fastball vz ≈ 14.8 m/s) that's ≈ 0.12m; 0.15 covers it with margin.
+	assert_float(s.position.z).is_equal_approx(0.0, 0.15)
 
 func test_same_seed_is_deterministic() -> void:
 	var a := BallFlight.from_pitch(_pitch(12345, 0))
