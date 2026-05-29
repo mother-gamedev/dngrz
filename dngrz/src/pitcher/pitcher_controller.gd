@@ -18,9 +18,9 @@ enum State { IDLE, AIMING, CHARGING }
 # Charge model knobs (feel-test tunable; the exact gesture is a Phase-B feel detail).
 const CHARGE_TICKS := 45            # ticks (~0.75s @ 60Hz) to fill the ramp to 1.0
 const MIN_POWER := 0.3              # no-charge / early release floor (still serviceable)
-const PERFECT_BAND := 0.12          # [1.0 - PERFECT_BAND, 1.0] is the perfect-release window
-const OVERHOLD_POWER_DECAY := 0.6   # power lost per unit charge past 1.0
-const OVERHOLD_ACC_SPAN := 0.6      # charge past 1.0 over which accuracy falls to meatball
+const PERFECT_BAND := 0.10          # [1.0 - PERFECT_BAND, 1.0] is the perfect-release window
+const OVERHOLD_POWER_DECAY := 1.0   # power lost per unit charge past 1.0
+const OVERHOLD_ACC_SPAN := 0.3      # charge past 1.0 over which accuracy falls to meatball
 const MEATBALL_ACCURACY := 0.5      # accuracy floor when wildly over-held
 const BEND_MAX := 0.4               # plate-plane metres of late break at full stick
 
